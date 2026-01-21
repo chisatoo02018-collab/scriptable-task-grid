@@ -118,7 +118,7 @@ let topSection = widget.addStack();
 topSection.layoutHorizontally();
 topSection.centerAlignContent();
 
-addStatItem(topSection, "今日の残り", `${dueToday}`, COLOR_DUE, true);
+addStatItem(topSection, "今日の残り", `${dueToday}`, COLOR_DUE);
 addDivider(topSection);
 addStatItem(topSection, "今日の総数", `${totalToday}`, COLOR_MAIN_VAL);
 addDivider(topSection);
@@ -134,7 +134,7 @@ let midSection = widget.addStack();
 midSection.layoutHorizontally();
 midSection.centerAlignContent();
 
-addStatItem(midSection, "今月の残り", `${dueMonth}`, COLOR_DUE, true);
+addStatItem(midSection, "今月の残り", `${dueMonth}`, COLOR_DUE);
 addDivider(midSection);
 addStatItem(midSection, "今月の総数", `${totalMonth}`, COLOR_MAIN_VAL);
 addDivider(midSection);
@@ -150,7 +150,7 @@ let botSection = widget.addStack();
 botSection.layoutHorizontally();
 botSection.centerAlignContent();
 
-addStatItem(botSection, "今年の残り", `${dueYear}`, COLOR_DUE, true);
+addStatItem(botSection, "今年の残り", `${dueYear}`, COLOR_DUE);
 addDivider(botSection);
 addStatItem(botSection, "今年の総数", `${totalYear}`, COLOR_MAIN_VAL);
 addDivider(botSection);
