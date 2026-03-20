@@ -10,6 +10,7 @@ const COLOR_SUB_TEXT = new Color("#8e8e93");    // サブテキスト
 const COLOR_BG       = new Color("#1c1c1e");    // 背景
 const COLOR_DUE      = new Color("#0a84ff");    // 残りタスク（青）
 const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
+const DONUT_SIZE     = 44;                      // ドーナツグラフのサイズ（pt）
 
 // ==========================================
 
@@ -140,8 +141,6 @@ async function createWidget() {
 // --------------------------------------------------
 // ドーナツカラム
 // --------------------------------------------------
-const DONUT_SIZE = 44;
-
 function addDonutColumn(container, period, done, due, diff, diffLabel) {
   const wrapper = container.addStack();
   wrapper.layoutVertically();
