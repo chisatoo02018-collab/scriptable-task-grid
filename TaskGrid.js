@@ -66,6 +66,14 @@ async function createWidget() {
   const doneYest   = cntDone(d => isSameDay(d, yesterday));
   const diffDay    = (doneToday + dueToday) - doneYest;
 
+  // ドーナツ中央値：今日期限の全タスク ∪ 今日完了した全タスク
+  const doneDueToday      = completed.filter(r => r.dueDate && isSameDay(r.dueDate, now)).length;
+  const doneTodayDueToday = completed.filter(r =>
+    r.completionDate && isSameDay(r.completionDate, now) &&
+    r.dueDate && isSameDay(r.dueDate, now)
+  ).length;
+  const centerTotal = doneDueToday + dueToday + doneToday - doneTodayDueToday;
+
   // 1〜12月の月別データ（今年 vs 前年、折れ線グラフ用）
   const prevYear   = curYear - 1;
   const monthlyData = [];
@@ -76,6 +84,8 @@ async function createWidget() {
       donePrev: cntDone(cd => isSameMonth(cd, prevYear, m))
     });
   }
+  const totalThis = monthlyData.reduce((s, d) => s + d.doneThis, 0);
+  const totalPrev = monthlyData.reduce((s, d) => s + d.donePrev, 0);
 
   // 過去7日の完了数（バーチャート用）
   const DAYS = 7;
@@ -95,7 +105,7 @@ async function createWidget() {
   statsRow.layoutHorizontally();
   statsRow.centerAlignContent();
 
-  addDonutColumn(statsRow, "今日", doneToday, dueToday, diffDay, "昨日比");
+  addDonutColumn(statsRow, doneToday, dueToday, diffDay, centerTotal);
   statsRow.addSpacer(6);
   const statDiv = statsRow.addStack();
   statDiv.size = new Size(1, 62);
@@ -109,13 +119,13 @@ async function createWidget() {
   const lineHeader = lineCol.addStack();
   lineHeader.layoutHorizontally();
   lineHeader.centerAlignContent();
-  const lhLabel = lineHeader.addText("完了タスク（月別）");
+  const lhLabel = lineHeader.addText("月別タスク数");
   lhLabel.font = Font.systemFont(8);
   lhLabel.textColor = COLOR_SUB_TEXT;
   lineHeader.addSpacer(6);
-  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}年`);
+  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}年（${totalThis}）`);
   lineHeader.addSpacer(4);
-  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}年`);
+  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}年（${totalPrev}）`);
   lineHeader.addSpacer();
 
   lineCol.addSpacer(2);
@@ -145,62 +155,46 @@ async function createWidget() {
 // --------------------------------------------------
 // ドーナツカラム
 // --------------------------------------------------
-function addDonutColumn(container, period, done, due, diff, diffLabel) {
+// done/due はドーナツ弧の色分け用、centerVal は中央表示値
+function addDonutColumn(container, done, due, diff, centerVal) {
   const wrapper = container.addStack();
-  wrapper.layoutVertically();
-  wrapper.size = new Size(86, 0);
+  wrapper.layoutHorizontally();
+  wrapper.centerAlignContent();
 
-  // 期間ラベル（上部）
-  addCentered(wrapper, period, Font.semiboldSystemFont(9), COLOR_SUB_TEXT);
-  wrapper.addSpacer(2);
-
-  // ドーナツグラフ（中央）
-  const donutRow = wrapper.addStack();
-  donutRow.addSpacer();
-  const imgView   = donutRow.addImage(drawDonutChart(done, due, DONUT_SIZE));
+  // ドーナツグラフ（左）
+  const imgView = wrapper.addImage(drawDonutChart(done, due, centerVal, DONUT_SIZE));
   imgView.imageSize = new Size(DONUT_SIZE, DONUT_SIZE);
   imgView.resizable = false;
-  donutRow.addSpacer();
 
-  wrapper.addSpacer(3);
+  wrapper.addSpacer(8);
 
-  // 総数 + 差分（下部）
-  const subStack = wrapper.addStack();
-  subStack.layoutHorizontally();
-  subStack.addSpacer();
+  // テキスト列（右）
+  const textCol = wrapper.addStack();
+  textCol.layoutVertically();
 
-  const total  = done + due;
+  const t1 = textCol.addText("今日");
+  t1.font      = Font.semiboldSystemFont(11);
+  t1.textColor = COLOR_MAIN_VAL;
+
+  textCol.addSpacer(5);
+
+  const t2 = textCol.addText(`残数: ${due}件`);
+  t2.font      = Font.systemFont(9);
+  t2.textColor = due > 0 ? COLOR_DUE : COLOR_SUB_TEXT;
+
+  textCol.addSpacer(4);
+
   const sign   = diff > 0 ? "+" : "";
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
-
-  const tTotal = subStack.addText(`${total}`);
-  tTotal.font      = Font.systemFont(9);
-  tTotal.textColor = COLOR_MAIN_VAL;
-
-  const tSep = subStack.addText("  ");
-  tSep.font      = Font.systemFont(9);
-  tSep.textColor = COLOR_SUB_TEXT;
-
-  const tDiff = subStack.addText(`${sign}${diff}`);
-  tDiff.font      = Font.systemFont(9);
-  tDiff.textColor = dColor;
-
-  subStack.addSpacer();
-}
-
-function addCentered(container, text, font, color) {
-  const s = container.addStack();
-  s.addSpacer();
-  const t = s.addText(text);
-  t.font      = font;
-  t.textColor = color;
-  s.addSpacer();
+  const t3 = textCol.addText(`前日比: ${sign}${diff}`);
+  t3.font      = Font.systemFont(9);
+  t3.textColor = dColor;
 }
 
 // --------------------------------------------------
 // ドーナツグラフ描画（DrawContext）
 // --------------------------------------------------
-function drawDonutChart(done, due, size) {
+function drawDonutChart(done, due, centerVal, size) {
   const ctx = new DrawContext();
   ctx.size               = new Size(size, size);
   ctx.opaque             = false;
@@ -244,11 +238,11 @@ function drawDonutChart(done, due, size) {
   ctx.setFillColor(COLOR_BG);
   ctx.fillPath();
 
-  // 中央テキスト：残りタスク数
-  const label    = `${due}`;
+  // 中央テキスト：今日の総タスク数
+  const label    = `${centerVal}`;
   const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 11 : label.length === 2 ? 13 : 15;
   ctx.setFont(Font.boldSystemFont(fontSize));
-  ctx.setTextColor(due > 0 ? COLOR_DUE : new Color("#8e8e93", 0.6));
+  ctx.setTextColor(centerVal > 0 ? COLOR_MAIN_VAL : new Color("#8e8e93", 0.6));
   ctx.setTextAlignedCenter();
   const tH = fontSize + 3;
   ctx.drawTextInRect(label, new Rect(0, size / 2 - tH / 2, size, tH));
