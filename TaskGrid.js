@@ -11,6 +11,11 @@ const COLOR_BG       = new Color("#1c1c1e");    // 背景
 const COLOR_DUE      = new Color("#0a84ff");    // 残りタスク（青）
 const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
 const DONUT_SIZE     = 44;                      // ドーナツグラフのサイズ（pt）
+const GAUGE_SIZE     = 36;                      // 円形ゲージのサイズ（pt）
+
+// ── 個人設定（寿命ゲージ用） ──
+const BIRTH_YEAR      = 1990;  // ← 生まれ年を設定
+const LIFE_EXPECTANCY = 90;    // ← 想定寿命（年）
 
 // ==========================================
 
@@ -40,7 +45,7 @@ function isSameYear(d, y)     { return d.getFullYear() === y; }
 async function createWidget() {
   const widget = new ListWidget();
   widget.backgroundColor = COLOR_BG;
-  widget.setPadding(8, 12, 8, 20);
+  widget.setPadding(8, 52, 8, 6);
 
   // --- データ取得 ---
   let calendars;
@@ -87,6 +92,15 @@ async function createWidget() {
   const totalThis = monthlyData.reduce((s, d) => s + d.doneThis, 0);
   const totalPrev = monthlyData.reduce((s, d) => s + d.donePrev, 0);
 
+  // 円形ゲージ用データ
+  const daysInMonth  = new Date(curYear, curMonth + 1, 0).getDate();
+  const monthRemain  = daysInMonth - now.getDate();
+  const monthProgress = monthRemain / daysInMonth;
+
+  const age          = curYear - BIRTH_YEAR;
+  const lifeRemain   = Math.max(LIFE_EXPECTANCY - age, 0);
+  const lifeProgress = lifeRemain / LIFE_EXPECTANCY;
+
   // 過去7日の完了数（バーチャート用）
   const DAYS = 7;
   const dailyCounts = [];
@@ -119,35 +133,52 @@ async function createWidget() {
   const lineHeader = lineCol.addStack();
   lineHeader.layoutHorizontally();
   lineHeader.centerAlignContent();
-  const lhLabel = lineHeader.addText("月別タスク数");
+  const lhLabel = lineHeader.addText("月次タスク数");
   lhLabel.font = Font.systemFont(8);
   lhLabel.textColor = COLOR_SUB_TEXT;
   lineHeader.addSpacer(6);
-  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}年（計${totalThis}件）`);
+  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}年（${totalThis}件）`);
   lineHeader.addSpacer(4);
-  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}年（計${totalPrev}件）`);
+  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}年（${totalPrev}件）`);
   lineHeader.addSpacer();
 
   lineCol.addSpacer(2);
-  const lineImg = lineCol.addImage(drawLineChart(monthlyData, 185, 65, curMonth));
+  const lineImg = lineCol.addImage(drawLineChart(monthlyData, 170, 65, curMonth));
   lineImg.resizable = false;
-  lineImg.imageSize = new Size(185, 65);
+  lineImg.imageSize = new Size(170, 65);
 
   widget.addSpacer(4);
   addHorizontalLine(widget);
   widget.addSpacer(3);
 
-  // ── バーチャート：過去7日の完了タスク ──
-  const chartHeader = widget.addStack();
-  const chartLabel  = chartHeader.addText("Weekly完了タスク");
-  chartLabel.font   = Font.systemFont(8);
-  chartLabel.textColor = COLOR_SUB_TEXT;
-  chartHeader.addSpacer();
-  widget.addSpacer(3);
+  // ── 下段：日次バーチャート | 円形ゲージ ──
+  const bottomRow = widget.addStack();
+  bottomRow.layoutHorizontally();
+  bottomRow.centerAlignContent();
 
-  const chartImage = drawBarChart(dailyCounts, 286, 36);
-  const chartView  = widget.addImage(chartImage);
+  // バーチャート列（左）
+  const barCol = bottomRow.addStack();
+  barCol.layoutVertically();
+  const barLabel = barCol.addText("日次完了タスク");
+  barLabel.font = Font.systemFont(8);
+  barLabel.textColor = COLOR_SUB_TEXT;
+  barCol.addSpacer(3);
+  const chartImage = drawBarChart(dailyCounts, 190, 30);
+  const chartView  = barCol.addImage(chartImage);
   chartView.resizable = false;
+
+  bottomRow.addSpacer(8);
+
+  // 円形ゲージ列（右）
+  const gaugeRow = bottomRow.addStack();
+  gaugeRow.layoutHorizontally();
+  gaugeRow.centerAlignContent();
+
+  addGaugeColumn(gaugeRow, "今月残", monthProgress, GAUGE_SIZE,
+    new Color("#2c2c2e"), COLOR_DUE, `${monthRemain}日`);
+  gaugeRow.addSpacer(6);
+  addGaugeColumn(gaugeRow, "寿命残", lifeProgress, GAUGE_SIZE,
+    new Color("#2c2c2e"), new Color("#ff9f0a"), `${lifeRemain}年`);
 
   return widget;
 }
@@ -411,6 +442,56 @@ function drawLineChart(data, width, height, curMonthIdx) {
     ctx.drawTextInRect(data[i].monthLabel,
       new Rect(xPos(i) - labelW / 2, height - LABEL_H, labelW, LABEL_H));
   }
+
+  return ctx.getImage();
+}
+
+function addGaugeColumn(container, label, progress, size, trackColor, fillColor, centerText) {
+  const col = container.addStack();
+  col.layoutVertically();
+  col.centerAlignContent();
+  const lbl = col.addText(label);
+  lbl.font = Font.systemFont(7);
+  lbl.textColor = COLOR_SUB_TEXT;
+  col.addSpacer(2);
+  const img = col.addImage(drawRingGauge(progress, size, trackColor, fillColor, centerText));
+  img.imageSize = new Size(size, size);
+  img.resizable = false;
+}
+
+function drawRingGauge(progress, size, trackColor, fillColor, centerText) {
+  const ctx = new DrawContext();
+  ctx.size = new Size(size, size);
+  ctx.opaque = false;
+  ctx.respectScreenScale = true;
+
+  const center = new Point(size / 2, size / 2);
+  const outerR = size / 2 - 0.5;
+  const innerR = outerR - 5;            // リング幅 5pt
+  const startAngle = -(Math.PI / 2);
+
+  // トラック（背景リング）
+  fillArcSegment(ctx, center, outerR, startAngle, startAngle + 2 * Math.PI, trackColor);
+
+  // 進捗弧（残り分）
+  if (progress > 0.005) {
+    fillArcSegment(ctx, center, outerR, startAngle, startAngle + progress * 2 * Math.PI, fillColor);
+  }
+
+  // 中心をくり抜いてリング形状に
+  const hole = new Path();
+  hole.addEllipse(new Rect(size / 2 - innerR, size / 2 - innerR, innerR * 2, innerR * 2));
+  ctx.addPath(hole);
+  ctx.setFillColor(COLOR_BG);
+  ctx.fillPath();
+
+  // 中央テキスト
+  const fontSize = centerText.length >= 4 ? 7 : 8;
+  ctx.setFont(Font.boldSystemFont(fontSize));
+  ctx.setTextColor(COLOR_MAIN_VAL);
+  ctx.setTextAlignedCenter();
+  const tH = fontSize + 2;
+  ctx.drawTextInRect(centerText, new Rect(0, size / 2 - tH / 2, size, tH));
 
   return ctx.getImage();
 }
