@@ -10,12 +10,13 @@ const COLOR_SUB_TEXT = new Color("#8e8e93");    // サブテキスト
 const COLOR_BG       = new Color("#1c1c1e");    // 背景
 const COLOR_DUE      = new Color("#0a84ff");    // 残りタスク（青）
 const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
-const DONUT_SIZE     = 44;                      // ドーナツグラフのサイズ（pt）
+const DONUT_SIZE     = 50;                      // ドーナツグラフのサイズ（pt）
 const GAUGE_SIZE     = 36;                      // 円形ゲージのサイズ（pt）
 
 // ── 個人設定（寿命ゲージ用） ──
-const BIRTH_YEAR      = 1990;  // ← 生まれ年を設定
-const LIFE_EXPECTANCY = 90;    // ← 想定寿命（年）
+const BIRTH_YEAR        = 1990;  // ← 生まれ年を設定
+const LIFE_EXPECTANCY   = 90;    // ← 想定寿命（年）
+const HEART_IMAGE_BASE64 = "";   // ← base64エンコード画像を設定（空欄=LifeMerterから自動取得）
 
 // ==========================================
 
@@ -96,11 +97,11 @@ async function createWidget() {
   const daysInMonth  = new Date(curYear, curMonth + 1, 0).getDate();
   const endOfMonth   = new Date(curYear, curMonth + 1, 0, 23, 59, 59);
   const monthRemainH = Math.ceil((endOfMonth - now) / (1000 * 60 * 60));
-  const monthProgress = monthRemainH / (daysInMonth * 24);
+  const monthElapsed  = 1 - monthRemainH / (daysInMonth * 24);  // 消費済み割合
 
   const age          = curYear - BIRTH_YEAR;
   const lifeRemain   = Math.max(LIFE_EXPECTANCY - age, 0);
-  const lifeProgress = lifeRemain / LIFE_EXPECTANCY;
+  const lifeElapsed  = age / LIFE_EXPECTANCY;                   // 消費済み割合
 
   const heartImage   = await loadHeartImage();
 
@@ -122,7 +123,8 @@ async function createWidget() {
   statsRow.layoutHorizontally();
   statsRow.centerAlignContent();
 
-  addDonutColumn(statsRow, doneToday, dueToday, diffDay, centerTotal);
+  const todayLabel = `${curMonth + 1}/${now.getDate()}`;
+  addDonutColumn(statsRow, doneToday, dueToday, diffDay, centerTotal, todayLabel);
   statsRow.addSpacer(6);
   const statDiv = statsRow.addStack();
   statDiv.size = new Size(1, 62);
@@ -163,14 +165,14 @@ async function createWidget() {
   const gaugeRow = bottomRow.addStack();
   gaugeRow.layoutHorizontally();
   gaugeRow.centerAlignContent();
-  gaugeRow.addSpacer(4);  // donut center-X = 4 + GAUGE_SIZE/2 = 22pt ✓
+  gaugeRow.addSpacer(7);  // donut center-X = 7 + GAUGE_SIZE/2 = 25pt = DONUT_SIZE/2 ✓
 
-  addGaugeColumn(gaugeRow, "今月残", monthProgress, GAUGE_SIZE,
-    new Color("#2c2c2e"), COLOR_DUE,
+  addGaugeColumn(gaugeRow, "今月残", monthElapsed, GAUGE_SIZE,
+    new Color("#2c2c2e"), COLOR_ACCENT,
     { type: "text", value: `${monthRemainH}h` });
   gaugeRow.addSpacer(8);
-  addGaugeColumn(gaugeRow, "寿命", lifeProgress, GAUGE_SIZE,
-    new Color("#2c2c2e"), COLOR_DUE,
+  addGaugeColumn(gaugeRow, "寿命", lifeElapsed, GAUGE_SIZE,
+    new Color("#2c2c2e"), COLOR_ACCENT,
     { type: "image", value: heartImage });
 
   bottomRow.addSpacer();  // 折れ線グラフ列の直下に自然に揃う
@@ -192,8 +194,8 @@ async function createWidget() {
 // --------------------------------------------------
 // ドーナツカラム
 // --------------------------------------------------
-// done/due はドーナツ弧の色分け用、centerVal は中央表示値
-function addDonutColumn(container, done, due, diff, centerVal) {
+// done/due はドーナツ弧の色分け用、centerVal は中央表示値、dateLabel は日付文字列
+function addDonutColumn(container, done, due, diff, centerVal, dateLabel) {
   const wrapper = container.addStack();
   wrapper.layoutHorizontally();
   wrapper.centerAlignContent();
@@ -210,7 +212,7 @@ function addDonutColumn(container, done, due, diff, centerVal) {
   const textCol = wrapper.addStack();
   textCol.layoutVertically();
 
-  const t1 = textCol.addText("今日");
+  const t1 = textCol.addText(dateLabel);
   t1.font      = Font.semiboldSystemFont(11);
   t1.textColor = COLOR_MAIN_VAL;
 
@@ -218,7 +220,7 @@ function addDonutColumn(container, done, due, diff, centerVal) {
 
   const row2 = textCol.addStack();
   row2.layoutHorizontally();
-  const l2 = row2.addText("残件数:");
+  const l2 = row2.addText("残件:");
   l2.font      = Font.systemFont(9);
   l2.textColor = COLOR_SUB_TEXT;
   row2.addSpacer();
@@ -232,9 +234,6 @@ function addDonutColumn(container, done, due, diff, centerVal) {
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
   const row3 = textCol.addStack();
   row3.layoutHorizontally();
-  const l3 = row3.addText("前日比:");
-  l3.font      = Font.systemFont(9);
-  l3.textColor = COLOR_SUB_TEXT;
   row3.addSpacer();
   const v3 = row3.addText(`${sign}${diff}`);
   v3.font      = Font.systemFont(9);
@@ -252,7 +251,7 @@ function drawDonutChart(done, due, centerVal, size) {
 
   const center = new Point(size / 2, size / 2);
   const outerR = size / 2 - 0.5;
-  const innerR = outerR * 0.60;   // ドーナツの穴の割合
+  const innerR = outerR * 0.75;   // ドーナツの穴の割合（細いリング・大きな穴）
   const total  = done + due;
 
   if (total === 0) {
@@ -274,7 +273,7 @@ function drawDonutChart(done, due, centerVal, size) {
     // 完了タスク（グレー）: 12時から反時計回り
     if (done > 0) {
       const doneStartAngle = startAngle - (done / total) * 2 * Math.PI;
-      fillArcSegment(ctx, center, outerR, doneStartAngle, startAngle, new Color("#6e6e73"));
+      fillArcSegment(ctx, center, outerR, doneStartAngle, startAngle, COLOR_ACCENT);
     }
   }
 
@@ -509,8 +508,15 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
   return ctx.getImage();
 }
 
-// LifeMerter リポジトリからハート画像を取得（失敗時は SF Symbol にフォールバック）
+// ハート画像を取得（優先順: HEART_IMAGE_BASE64 → LifeMerter repo → SF Symbol）
 async function loadHeartImage() {
+  if (HEART_IMAGE_BASE64) {
+    try {
+      const data = Data.fromBase64String(HEART_IMAGE_BASE64);
+      const img  = Image.fromData(data);
+      if (img) return img;
+    } catch (e) {}
+  }
   try {
     const req = new Request(
       "https://raw.githubusercontent.com/chisatoo02018-collab/LifeMerter/main/LifeMerter.js"
