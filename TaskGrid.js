@@ -66,16 +66,14 @@ async function createWidget() {
   const doneYest   = cntDone(d => isSameDay(d, yesterday));
   const diffDay    = (doneToday + dueToday) - doneYest;
 
-  // 過去6ヶ月の月別データ（折れ線グラフ用）
-  const LINE_MONTHS = 6;
+  // 1〜12月の月別データ（今年 vs 前年、折れ線グラフ用）
+  const prevYear   = curYear - 1;
   const monthlyData = [];
-  for (let i = LINE_MONTHS - 1; i >= 0; i--) {
-    const d = new Date(curYear, curMonth - i, 1);
-    const y = d.getFullYear(), m = d.getMonth();
+  for (let m = 0; m < 12; m++) {
     monthlyData.push({
       monthLabel: `${m + 1}月`,
-      done: cntDone(cd => isSameMonth(cd, y, m)),
-      due:  cntDue (cd => isSameMonth(cd, y, m))
+      doneThis: cntDone(cd => isSameMonth(cd, curYear, m)),
+      donePrev: cntDone(cd => isSameMonth(cd, prevYear, m))
     });
   }
 
@@ -90,19 +88,7 @@ async function createWidget() {
 
   // ==================== 描画 ====================
 
-  // ヘッダー
-  const headerStack = widget.addStack();
-  headerStack.centerAlignContent();
-  const icon = headerStack.addImage(SFSymbol.named("square.grid.2x2.fill").image);
-  icon.tintColor    = COLOR_DUE;
-  icon.imageSize    = new Size(14, 14);
-  headerStack.addSpacer(5);
-  const titleText   = headerStack.addText("Task Grid");
-  titleText.font    = Font.semiboldSystemFont(13);
-  titleText.textColor = COLOR_MAIN_VAL;
-  headerStack.addSpacer();
-
-  widget.addSpacer(3);
+  widget.addSpacer(2);
 
   // ── 統計行：今日ドーナツ | 折れ線グラフ（6ヶ月） ──
   const statsRow = widget.addStack();
@@ -123,19 +109,19 @@ async function createWidget() {
   const lineHeader = lineCol.addStack();
   lineHeader.layoutHorizontally();
   lineHeader.centerAlignContent();
-  const lhLabel = lineHeader.addText("月別タスク");
+  const lhLabel = lineHeader.addText("完了タスク（月別）");
   lhLabel.font = Font.systemFont(8);
   lhLabel.textColor = COLOR_SUB_TEXT;
   lineHeader.addSpacer(6);
-  addLegendDot(lineHeader, COLOR_ACCENT, "完了");
+  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}年`);
   lineHeader.addSpacer(4);
-  addLegendDot(lineHeader, COLOR_DUE, "残り");
+  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}年`);
   lineHeader.addSpacer();
 
   lineCol.addSpacer(2);
-  const lineImg = lineCol.addImage(drawLineChart(monthlyData, 185, 58));
+  const lineImg = lineCol.addImage(drawLineChart(monthlyData, 185, 65, curMonth));
   lineImg.resizable = false;
-  lineImg.imageSize = new Size(185, 58);
+  lineImg.imageSize = new Size(185, 65);
 
   widget.addSpacer(4);
   addHorizontalLine(widget);
@@ -341,74 +327,79 @@ function drawBarChart(data, width, height) {
 // --------------------------------------------------
 // 折れ線グラフ描画（DrawContext）
 // --------------------------------------------------
-function drawLineChart(data, width, height) {
+// data: [{ monthLabel, doneThis, donePrev }] × 12
+// curMonthIdx: 現在月（0-11）— 今年ラインはここで止める
+function drawLineChart(data, width, height, curMonthIdx) {
   const ctx = new DrawContext();
   ctx.size = new Size(width, height);
   ctx.opaque = false;
   ctx.respectScreenScale = true;
 
-  const n       = data.length;
+  const n       = data.length;           // 12
   const LABEL_H = 12;
-  const TOP_PAD = 3;
+  const TOP_PAD = 4;
   const chartH  = height - LABEL_H - TOP_PAD;
-  const maxVal  = Math.max(...data.map(d => Math.max(d.done, d.due)), 1);
+  const maxVal  = Math.max(...data.map(d => Math.max(d.doneThis, d.donePrev)), 1);
 
   const xPos = (i) => (width - 12) * i / (n - 1) + 6;
   const yPos = (v) => TOP_PAD + (1 - v / maxVal) * (chartH - 2);
 
+  const COLOR_PREV = new Color("#636366");
+
   // 薄いグリッド線（中央）
   const midY = TOP_PAD + (chartH - 2) / 2;
-  const gridPath = new Path();
-  gridPath.move(new Point(6, midY));
-  gridPath.addLine(new Point(width - 6, midY));
-  ctx.addPath(gridPath);
+  const grid = new Path();
+  grid.move(new Point(6, midY));
+  grid.addLine(new Point(width - 6, midY));
+  ctx.addPath(grid);
   ctx.setStrokeColor(new Color("#3a3a3c", 0.5));
   ctx.setLineWidth(0.5);
   ctx.strokePath();
 
-  // 完了ライン（緑）
-  const donePath = new Path();
-  donePath.move(new Point(xPos(0), yPos(data[0].done)));
-  for (let i = 1; i < n; i++) donePath.addLine(new Point(xPos(i), yPos(data[i].done)));
-  ctx.addPath(donePath);
+  // 前年ライン（グレー、全12ヶ月）
+  const prevPath = new Path();
+  prevPath.move(new Point(xPos(0), yPos(data[0].donePrev)));
+  for (let i = 1; i < n; i++) prevPath.addLine(new Point(xPos(i), yPos(data[i].donePrev)));
+  ctx.addPath(prevPath);
+  ctx.setStrokeColor(COLOR_PREV);
+  ctx.setLineWidth(1.5);
+  ctx.strokePath();
+
+  // 今年ライン（緑、curMonthIdx まで）
+  const thisPath = new Path();
+  thisPath.move(new Point(xPos(0), yPos(data[0].doneThis)));
+  for (let i = 1; i <= curMonthIdx; i++) thisPath.addLine(new Point(xPos(i), yPos(data[i].doneThis)));
+  ctx.addPath(thisPath);
   ctx.setStrokeColor(COLOR_ACCENT);
   ctx.setLineWidth(1.5);
   ctx.strokePath();
 
-  // 残りライン（青）
-  const duePath = new Path();
-  duePath.move(new Point(xPos(0), yPos(data[0].due)));
-  for (let i = 1; i < n; i++) duePath.addLine(new Point(xPos(i), yPos(data[i].due)));
-  ctx.addPath(duePath);
-  ctx.setStrokeColor(COLOR_DUE);
-  ctx.setLineWidth(1.5);
-  ctx.strokePath();
-
-  // ドット（完了）
+  // ドット（前年）
   for (let i = 0; i < n; i++) {
-    const x = xPos(i), y = yPos(data[i].done), r = 2;
+    const x = xPos(i), y = yPos(data[i].donePrev), r = 1.5;
     const p = new Path();
     p.addEllipse(new Rect(x - r, y - r, r * 2, r * 2));
     ctx.addPath(p);
-    ctx.setFillColor(i === n - 1 ? COLOR_ACCENT : new Color("#30d158", 0.6));
+    ctx.setFillColor(COLOR_PREV);
     ctx.fillPath();
   }
 
-  // ドット（残り）
-  for (let i = 0; i < n; i++) {
-    const x = xPos(i), y = yPos(data[i].due), r = 2;
+  // ドット（今年、今月のみ強調）
+  for (let i = 0; i <= curMonthIdx; i++) {
+    const x = xPos(i), y = yPos(data[i].doneThis);
+    const r = i === curMonthIdx ? 2.5 : 1.5;
     const p = new Path();
     p.addEllipse(new Rect(x - r, y - r, r * 2, r * 2));
     ctx.addPath(p);
-    ctx.setFillColor(i === n - 1 ? COLOR_DUE : new Color("#0a84ff", 0.6));
+    ctx.setFillColor(i === curMonthIdx ? COLOR_ACCENT : new Color("#30d158", 0.7));
     ctx.fillPath();
   }
 
-  // X 軸ラベル（月）
+  // X 軸ラベル（月）— 今月は白、他はグレー
   const labelW = width / n;
   for (let i = 0; i < n; i++) {
-    ctx.setFont(Font.systemFont(8));
-    ctx.setTextColor(i === n - 1 ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
+    ctx.setFont(Font.systemFont(7));
+    ctx.setTextColor(i === curMonthIdx ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
     ctx.setTextAlignedCenter();
     ctx.drawTextInRect(data[i].monthLabel,
       new Rect(xPos(i) - labelW / 2, height - LABEL_H, labelW, LABEL_H));
