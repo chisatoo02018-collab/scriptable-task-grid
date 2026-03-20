@@ -45,7 +45,7 @@ function isSameYear(d, y)     { return d.getFullYear() === y; }
 async function createWidget() {
   const widget = new ListWidget();
   widget.backgroundColor = COLOR_BG;
-  widget.setPadding(8, 52, 8, 6);
+  widget.setPadding(8, 16, 8, 16);
 
   // --- データ取得 ---
   let calendars;
@@ -94,12 +94,15 @@ async function createWidget() {
 
   // 円形ゲージ用データ
   const daysInMonth  = new Date(curYear, curMonth + 1, 0).getDate();
-  const monthRemain  = daysInMonth - now.getDate();
-  const monthProgress = monthRemain / daysInMonth;
+  const endOfMonth   = new Date(curYear, curMonth + 1, 0, 23, 59, 59);
+  const monthRemainH = Math.ceil((endOfMonth - now) / (1000 * 60 * 60));
+  const monthProgress = monthRemainH / (daysInMonth * 24);
 
   const age          = curYear - BIRTH_YEAR;
   const lifeRemain   = Math.max(LIFE_EXPECTANCY - age, 0);
   const lifeProgress = lifeRemain / LIFE_EXPECTANCY;
+
+  const heartImage   = await loadHeartImage();
 
   // 過去7日の完了数（バーチャート用）
   const DAYS = 7;
@@ -143,42 +146,45 @@ async function createWidget() {
   lineHeader.addSpacer();
 
   lineCol.addSpacer(2);
-  const lineImg = lineCol.addImage(drawLineChart(monthlyData, 170, 65, curMonth));
+  const lineImg = lineCol.addImage(drawLineChart(monthlyData, 195, 65, curMonth));
   lineImg.resizable = false;
-  lineImg.imageSize = new Size(170, 65);
+  lineImg.imageSize = new Size(195, 65);
 
   widget.addSpacer(4);
   addHorizontalLine(widget);
   widget.addSpacer(3);
 
-  // ── 下段：日次バーチャート | 円形ゲージ ──
+  // ── 下段：円形ゲージ（左・ドーナツ下）| 日次バーチャート（右・折れ線下） ──
   const bottomRow = widget.addStack();
   bottomRow.layoutHorizontally();
   bottomRow.centerAlignContent();
 
-  // バーチャート列（左）
+  // 円形ゲージ（左）— ドーナツ中心 X に揃えるため 4pt オフセット
+  const gaugeRow = bottomRow.addStack();
+  gaugeRow.layoutHorizontally();
+  gaugeRow.centerAlignContent();
+  gaugeRow.addSpacer(4);  // donut center-X = 4 + GAUGE_SIZE/2 = 22pt ✓
+
+  addGaugeColumn(gaugeRow, "今月残", monthProgress, GAUGE_SIZE,
+    new Color("#2c2c2e"), COLOR_DUE,
+    { type: "text", value: `${monthRemainH}h` });
+  gaugeRow.addSpacer(8);
+  addGaugeColumn(gaugeRow, "寿命", lifeProgress, GAUGE_SIZE,
+    new Color("#2c2c2e"), COLOR_DUE,
+    { type: "image", value: heartImage });
+
+  bottomRow.addSpacer();  // 折れ線グラフ列の直下に自然に揃う
+
+  // バーチャート列（右）
   const barCol = bottomRow.addStack();
   barCol.layoutVertically();
   const barLabel = barCol.addText("日次完了タスク");
   barLabel.font = Font.systemFont(8);
   barLabel.textColor = COLOR_SUB_TEXT;
   barCol.addSpacer(3);
-  const chartImage = drawBarChart(dailyCounts, 190, 30);
+  const chartImage = drawBarChart(dailyCounts, 195, 30);
   const chartView  = barCol.addImage(chartImage);
   chartView.resizable = false;
-
-  bottomRow.addSpacer(8);
-
-  // 円形ゲージ列（右）
-  const gaugeRow = bottomRow.addStack();
-  gaugeRow.layoutHorizontally();
-  gaugeRow.centerAlignContent();
-
-  addGaugeColumn(gaugeRow, "今月残", monthProgress, GAUGE_SIZE,
-    new Color("#2c2c2e"), COLOR_DUE, `${monthRemain}日`);
-  gaugeRow.addSpacer(6);
-  addGaugeColumn(gaugeRow, "寿命残", lifeProgress, GAUGE_SIZE,
-    new Color("#2c2c2e"), new Color("#ff9f0a"), `${lifeRemain}年`);
 
   return widget;
 }
@@ -259,16 +265,16 @@ function drawDonutChart(done, due, centerVal, size) {
   } else {
     const startAngle = -(Math.PI / 2); // 12時の位置から開始（時計回り）
 
-    // 完了タスク（グレー）
-    if (done > 0) {
-      const doneEndAngle = startAngle + (done / total) * 2 * Math.PI;
-      fillArcSegment(ctx, center, outerR, startAngle, doneEndAngle, new Color("#6e6e73"));
+    // 残りタスク（青）: 12時から時計回り
+    if (due > 0) {
+      const dueEndAngle = startAngle + (due / total) * 2 * Math.PI;
+      fillArcSegment(ctx, center, outerR, startAngle, dueEndAngle, COLOR_DUE);
     }
 
-    // 残りタスク（青）
-    if (due > 0) {
-      const dueStartAngle = startAngle + (done / total) * 2 * Math.PI;
-      fillArcSegment(ctx, center, outerR, dueStartAngle, startAngle + 2 * Math.PI, COLOR_DUE);
+    // 完了タスク（グレー）: 12時から反時計回り
+    if (done > 0) {
+      const doneStartAngle = startAngle - (done / total) * 2 * Math.PI;
+      fillArcSegment(ctx, center, outerR, doneStartAngle, startAngle, new Color("#6e6e73"));
     }
   }
 
@@ -446,7 +452,7 @@ function drawLineChart(data, width, height, curMonthIdx) {
   return ctx.getImage();
 }
 
-function addGaugeColumn(container, label, progress, size, trackColor, fillColor, centerText) {
+function addGaugeColumn(container, label, progress, size, trackColor, fillColor, centerContent) {
   const col = container.addStack();
   col.layoutVertically();
   col.centerAlignContent();
@@ -454,12 +460,12 @@ function addGaugeColumn(container, label, progress, size, trackColor, fillColor,
   lbl.font = Font.systemFont(7);
   lbl.textColor = COLOR_SUB_TEXT;
   col.addSpacer(2);
-  const img = col.addImage(drawRingGauge(progress, size, trackColor, fillColor, centerText));
+  const img = col.addImage(drawRingGauge(progress, size, trackColor, fillColor, centerContent));
   img.imageSize = new Size(size, size);
   img.resizable = false;
 }
 
-function drawRingGauge(progress, size, trackColor, fillColor, centerText) {
+function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
   const ctx = new DrawContext();
   ctx.size = new Size(size, size);
   ctx.opaque = false;
@@ -485,15 +491,38 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerText) {
   ctx.setFillColor(COLOR_BG);
   ctx.fillPath();
 
-  // 中央テキスト
-  const fontSize = centerText.length >= 4 ? 7 : 8;
-  ctx.setFont(Font.boldSystemFont(fontSize));
-  ctx.setTextColor(COLOR_MAIN_VAL);
-  ctx.setTextAlignedCenter();
-  const tH = fontSize + 2;
-  ctx.drawTextInRect(centerText, new Rect(0, size / 2 - tH / 2, size, tH));
+  // 中央コンテンツ（画像 or テキスト）
+  if (centerContent && centerContent.type === "image" && centerContent.value) {
+    const hSize = Math.floor(innerR * 1.4);
+    ctx.drawImageInRect(centerContent.value,
+      new Rect(size / 2 - hSize / 2, size / 2 - hSize / 2, hSize, hSize));
+  } else if (centerContent && centerContent.value != null) {
+    const txt = String(centerContent.value);
+    const fontSize = txt.length >= 4 ? 7 : 8;
+    ctx.setFont(Font.boldSystemFont(fontSize));
+    ctx.setTextColor(COLOR_MAIN_VAL);
+    ctx.setTextAlignedCenter();
+    const tH = fontSize + 2;
+    ctx.drawTextInRect(txt, new Rect(0, size / 2 - tH / 2, size, tH));
+  }
 
   return ctx.getImage();
+}
+
+// LifeMerter リポジトリからハート画像を取得（失敗時は SF Symbol にフォールバック）
+async function loadHeartImage() {
+  try {
+    const req = new Request(
+      "https://raw.githubusercontent.com/chisatoo02018-collab/LifeMerter/main/LifeMerter.js"
+    );
+    const js = await req.loadString();
+    const match = js.match(/heartImageBase64[^"']*["']([A-Za-z0-9+/=]{500,})["']/);
+    if (match && match[1]) {
+      const data = Data.fromBase64String(match[1]);
+      return Image.fromData(data);
+    }
+  } catch (e) {}
+  return SFSymbol.named("heart.fill").image;
 }
 
 function addLegendDot(container, color, label) {
