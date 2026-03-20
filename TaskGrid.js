@@ -40,7 +40,7 @@ function isSameYear(d, y)     { return d.getFullYear() === y; }
 async function createWidget() {
   const widget = new ListWidget();
   widget.backgroundColor = COLOR_BG;
-  widget.setPadding(8, 20, 8, 20);
+  widget.setPadding(8, 12, 8, 20);
 
   // --- データ取得 ---
   let calendars;
@@ -79,7 +79,7 @@ async function createWidget() {
   const monthlyData = [];
   for (let m = 0; m < 12; m++) {
     monthlyData.push({
-      monthLabel: `${m + 1}月`,
+      monthLabel: `${m + 1}`,
       doneThis: cntDone(cd => isSameMonth(cd, curYear, m)),
       donePrev: cntDone(cd => isSameMonth(cd, prevYear, m))
     });
@@ -123,9 +123,9 @@ async function createWidget() {
   lhLabel.font = Font.systemFont(8);
   lhLabel.textColor = COLOR_SUB_TEXT;
   lineHeader.addSpacer(6);
-  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}年（${totalThis}）`);
+  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}年（計${totalThis}件）`);
   lineHeader.addSpacer(4);
-  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}年（${totalPrev}）`);
+  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}年（計${totalPrev}件）`);
   lineHeader.addSpacer();
 
   lineCol.addSpacer(2);
@@ -139,7 +139,7 @@ async function createWidget() {
 
   // ── バーチャート：過去7日の完了タスク ──
   const chartHeader = widget.addStack();
-  const chartLabel  = chartHeader.addText("完了タスク（過去7日）");
+  const chartLabel  = chartHeader.addText("Weekly完了タスク");
   chartLabel.font   = Font.systemFont(8);
   chartLabel.textColor = COLOR_SUB_TEXT;
   chartHeader.addSpacer();
@@ -160,6 +160,7 @@ function addDonutColumn(container, done, due, diff, centerVal) {
   const wrapper = container.addStack();
   wrapper.layoutHorizontally();
   wrapper.centerAlignContent();
+  wrapper.size = new Size(96, 0);  // 幅固定で数値の右揃えを確保
 
   // ドーナツグラフ（左）
   const imgView = wrapper.addImage(drawDonutChart(done, due, centerVal, DONUT_SIZE));
@@ -168,7 +169,7 @@ function addDonutColumn(container, done, due, diff, centerVal) {
 
   wrapper.addSpacer(8);
 
-  // テキスト列（右）
+  // テキスト列（右）— ラベル左寄せ・数値右寄せで「お尻」を揃える
   const textCol = wrapper.addStack();
   textCol.layoutVertically();
 
@@ -178,17 +179,29 @@ function addDonutColumn(container, done, due, diff, centerVal) {
 
   textCol.addSpacer(5);
 
-  const t2 = textCol.addText(`残数: ${due}件`);
-  t2.font      = Font.systemFont(9);
-  t2.textColor = due > 0 ? COLOR_DUE : COLOR_SUB_TEXT;
+  const row2 = textCol.addStack();
+  row2.layoutHorizontally();
+  const l2 = row2.addText("残件数:");
+  l2.font      = Font.systemFont(9);
+  l2.textColor = COLOR_SUB_TEXT;
+  row2.addSpacer();
+  const v2 = row2.addText(`${due}`);
+  v2.font      = Font.systemFont(9);
+  v2.textColor = due > 0 ? COLOR_DUE : COLOR_SUB_TEXT;
 
   textCol.addSpacer(4);
 
   const sign   = diff > 0 ? "+" : "";
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
-  const t3 = textCol.addText(`前日比: ${sign}${diff}`);
-  t3.font      = Font.systemFont(9);
-  t3.textColor = dColor;
+  const row3 = textCol.addStack();
+  row3.layoutHorizontally();
+  const l3 = row3.addText("前日比:");
+  l3.font      = Font.systemFont(9);
+  l3.textColor = COLOR_SUB_TEXT;
+  row3.addSpacer();
+  const v3 = row3.addText(`${sign}${diff}`);
+  v3.font      = Font.systemFont(9);
+  v3.textColor = dColor;
 }
 
 // --------------------------------------------------
@@ -215,10 +228,10 @@ function drawDonutChart(done, due, centerVal, size) {
   } else {
     const startAngle = -(Math.PI / 2); // 12時の位置から開始（時計回り）
 
-    // 完了タスク（緑）
+    // 完了タスク（グレー）
     if (done > 0) {
       const doneEndAngle = startAngle + (done / total) * 2 * Math.PI;
-      fillArcSegment(ctx, center, outerR, startAngle, doneEndAngle, COLOR_ACCENT);
+      fillArcSegment(ctx, center, outerR, startAngle, doneEndAngle, new Color("#6e6e73"));
     }
 
     // 残りタスク（青）
