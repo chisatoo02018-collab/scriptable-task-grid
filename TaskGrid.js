@@ -55,8 +55,6 @@ async function createWidget() {
   const curYear    = now.getFullYear();
   const curMonth   = now.getMonth();
   const yesterday  = new Date(now); yesterday.setDate(now.getDate() - 1);
-  const lastMonthD = new Date(curYear, curMonth - 1, 1);
-  const lastYear   = curYear - 1;
 
   // --- 集計ヘルパー ---
   const cntDone = (fn) => completed.filter(r => r.completionDate && fn(r.completionDate)).length;
@@ -68,20 +66,18 @@ async function createWidget() {
   const doneYest   = cntDone(d => isSameDay(d, yesterday));
   const diffDay    = (doneToday + dueToday) - doneYest;
 
-  // 今月
-  const doneMonth  = cntDone(d => isSameMonth(d, curYear, curMonth));
-  const dueMonth   = cntDue (d => isSameMonth(d, curYear, curMonth));
-  const lmY = lastMonthD.getFullYear(), lmM = lastMonthD.getMonth();
-  const doneLM     = cntDone(d => isSameMonth(d, lmY, lmM));
-  const dueLM      = cntDue (d => isSameMonth(d, lmY, lmM));
-  const diffMonth  = (doneMonth + dueMonth) - (doneLM + dueLM);
-
-  // 今年
-  const doneYear   = cntDone(d => isSameYear(d, curYear));
-  const dueYear    = cntDue (d => isSameYear(d, curYear));
-  const doneLY     = cntDone(d => isSameYear(d, lastYear));
-  const dueLY      = cntDue (d => isSameYear(d, lastYear));
-  const diffYear   = (doneYear + dueYear) - (doneLY + dueLY);
+  // 過去6ヶ月の月別データ（折れ線グラフ用）
+  const LINE_MONTHS = 6;
+  const monthlyData = [];
+  for (let i = LINE_MONTHS - 1; i >= 0; i--) {
+    const d = new Date(curYear, curMonth - i, 1);
+    const y = d.getFullYear(), m = d.getMonth();
+    monthlyData.push({
+      monthLabel: `${m + 1}月`,
+      done: cntDone(cd => isSameMonth(cd, y, m)),
+      due:  cntDue (cd => isSameMonth(cd, y, m))
+    });
+  }
 
   // 過去7日の完了数（バーチャート用）
   const DAYS = 7;
@@ -108,16 +104,38 @@ async function createWidget() {
 
   widget.addSpacer(3);
 
-  // ── ドーナツ統計行：今日 | 今月 | 今年 ──
+  // ── 統計行：今日ドーナツ | 折れ線グラフ（6ヶ月） ──
   const statsRow = widget.addStack();
   statsRow.layoutHorizontally();
   statsRow.centerAlignContent();
 
-  addDonutColumn(statsRow, "今日", doneToday, dueToday, diffDay,   "昨日比");
-  addColumnDivider(statsRow);
-  addDonutColumn(statsRow, "今月", doneMonth, dueMonth, diffMonth, "先月比");
-  addColumnDivider(statsRow);
-  addDonutColumn(statsRow, "今年", doneYear,  dueYear,  diffYear,  "昨年比");
+  addDonutColumn(statsRow, "今日", doneToday, dueToday, diffDay, "昨日比");
+  statsRow.addSpacer(6);
+  const statDiv = statsRow.addStack();
+  statDiv.size = new Size(1, 62);
+  statDiv.backgroundColor = COLOR_DIVIDER;
+  statsRow.addSpacer(8);
+
+  // 折れ線グラフ（月別）
+  const lineCol = statsRow.addStack();
+  lineCol.layoutVertically();
+
+  const lineHeader = lineCol.addStack();
+  lineHeader.layoutHorizontally();
+  lineHeader.centerAlignContent();
+  const lhLabel = lineHeader.addText("月別タスク");
+  lhLabel.font = Font.systemFont(8);
+  lhLabel.textColor = COLOR_SUB_TEXT;
+  lineHeader.addSpacer(6);
+  addLegendDot(lineHeader, COLOR_ACCENT, "完了");
+  lineHeader.addSpacer(4);
+  addLegendDot(lineHeader, COLOR_DUE, "残り");
+  lineHeader.addSpacer();
+
+  lineCol.addSpacer(2);
+  const lineImg = lineCol.addImage(drawLineChart(monthlyData, 185, 58));
+  lineImg.resizable = false;
+  lineImg.imageSize = new Size(185, 58);
 
   widget.addSpacer(4);
   addHorizontalLine(widget);
@@ -318,6 +336,96 @@ function drawBarChart(data, width, height) {
   }
 
   return ctx.getImage();
+}
+
+// --------------------------------------------------
+// 折れ線グラフ描画（DrawContext）
+// --------------------------------------------------
+function drawLineChart(data, width, height) {
+  const ctx = new DrawContext();
+  ctx.size = new Size(width, height);
+  ctx.opaque = false;
+  ctx.respectScreenScale = true;
+
+  const n       = data.length;
+  const LABEL_H = 12;
+  const TOP_PAD = 3;
+  const chartH  = height - LABEL_H - TOP_PAD;
+  const maxVal  = Math.max(...data.map(d => Math.max(d.done, d.due)), 1);
+
+  const xPos = (i) => (width - 12) * i / (n - 1) + 6;
+  const yPos = (v) => TOP_PAD + (1 - v / maxVal) * (chartH - 2);
+
+  // 薄いグリッド線（中央）
+  const midY = TOP_PAD + (chartH - 2) / 2;
+  const gridPath = new Path();
+  gridPath.move(new Point(6, midY));
+  gridPath.addLine(new Point(width - 6, midY));
+  ctx.addPath(gridPath);
+  ctx.setStrokeColor(new Color("#3a3a3c", 0.5));
+  ctx.setLineWidth(0.5);
+  ctx.strokePath();
+
+  // 完了ライン（緑）
+  const donePath = new Path();
+  donePath.move(new Point(xPos(0), yPos(data[0].done)));
+  for (let i = 1; i < n; i++) donePath.addLine(new Point(xPos(i), yPos(data[i].done)));
+  ctx.addPath(donePath);
+  ctx.setStrokeColor(COLOR_ACCENT);
+  ctx.setLineWidth(1.5);
+  ctx.strokePath();
+
+  // 残りライン（青）
+  const duePath = new Path();
+  duePath.move(new Point(xPos(0), yPos(data[0].due)));
+  for (let i = 1; i < n; i++) duePath.addLine(new Point(xPos(i), yPos(data[i].due)));
+  ctx.addPath(duePath);
+  ctx.setStrokeColor(COLOR_DUE);
+  ctx.setLineWidth(1.5);
+  ctx.strokePath();
+
+  // ドット（完了）
+  for (let i = 0; i < n; i++) {
+    const x = xPos(i), y = yPos(data[i].done), r = 2;
+    const p = new Path();
+    p.addEllipse(new Rect(x - r, y - r, r * 2, r * 2));
+    ctx.addPath(p);
+    ctx.setFillColor(i === n - 1 ? COLOR_ACCENT : new Color("#30d158", 0.6));
+    ctx.fillPath();
+  }
+
+  // ドット（残り）
+  for (let i = 0; i < n; i++) {
+    const x = xPos(i), y = yPos(data[i].due), r = 2;
+    const p = new Path();
+    p.addEllipse(new Rect(x - r, y - r, r * 2, r * 2));
+    ctx.addPath(p);
+    ctx.setFillColor(i === n - 1 ? COLOR_DUE : new Color("#0a84ff", 0.6));
+    ctx.fillPath();
+  }
+
+  // X 軸ラベル（月）
+  const labelW = width / n;
+  for (let i = 0; i < n; i++) {
+    ctx.setFont(Font.systemFont(8));
+    ctx.setTextColor(i === n - 1 ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
+    ctx.setTextAlignedCenter();
+    ctx.drawTextInRect(data[i].monthLabel,
+      new Rect(xPos(i) - labelW / 2, height - LABEL_H, labelW, LABEL_H));
+  }
+
+  return ctx.getImage();
+}
+
+function addLegendDot(container, color, label) {
+  const dot = container.addStack();
+  dot.size = new Size(6, 6);
+  dot.backgroundColor = color;
+  dot.cornerRadius = 3;
+  container.addSpacer(2);
+  const t = container.addText(label);
+  t.font = Font.systemFont(7);
+  t.textColor = COLOR_SUB_TEXT;
 }
 
 // --------------------------------------------------
