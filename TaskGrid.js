@@ -1,255 +1,269 @@
 // ==========================================
-// 設定・カラーパレット (Integrated: Wide Padding)
+// 設定・カラーパレット
 // ==========================================
 const TARGET_LIST_NAME = "";
 
 // カラー設定
-const COLOR_ACCENT = new Color("#30d158");   // 緑（プラス）
-const COLOR_MINUS = new Color("#ff453a");    // 赤（マイナス）
-const COLOR_MAIN_VAL = new Color("#ffffff"); // メイン数字
-const COLOR_SUB_TEXT = new Color("#8e8e93"); // サブテキスト
-const COLOR_BG = new Color("#1c1c1e");       // 背景
-
-// 「残りタスク」の色（提示された青色）
-const COLOR_DUE = new Color("#0a84ff");
+const COLOR_ACCENT   = new Color("#30d158");   // 緑（プラス）
+const COLOR_MINUS    = new Color("#ff453a");    // 赤（マイナス）
+const COLOR_MAIN_VAL = new Color("#ffffff");    // メイン数字
+const COLOR_SUB_TEXT = new Color("#8e8e93");    // サブテキスト
+const COLOR_BG       = new Color("#1c1c1e");    // 背景
+const COLOR_DUE      = new Color("#0a84ff");    // 残りタスク（青）
+const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
 
 // ==========================================
 
 if (config.runsInWidget) {
-let widget = await createWidget();
-Script.setWidget(widget);
+  let widget = await createWidget();
+  Script.setWidget(widget);
 } else {
-let widget = await createWidget();
-widget.presentMedium();
+  let widget = await createWidget();
+  widget.presentMedium();
 }
 Script.complete();
 
+// --------------------------------------------------
+// 日付ヘルパー（グローバルスコープ）
+// --------------------------------------------------
+function isSameDay(d, t) {
+  return d.getDate()     === t.getDate()
+      && d.getMonth()    === t.getMonth()
+      && d.getFullYear() === t.getFullYear();
+}
+function isSameMonth(d, y, m) { return d.getMonth() === m && d.getFullYear() === y; }
+function isSameYear(d, y)     { return d.getFullYear() === y; }
+
+// --------------------------------------------------
+// メインウィジェット
+// --------------------------------------------------
 async function createWidget() {
-const widget = new ListWidget();
-widget.backgroundColor = COLOR_BG;
+  const widget = new ListWidget();
+  widget.backgroundColor = COLOR_BG;
+  widget.setPadding(10, 20, 8, 20);
 
-// 【修正】左右のパディングを増やす (14 -> 24)
-widget.setPadding(8, 24, 8, 24);
+  // --- データ取得 ---
+  let calendars;
+  if (TARGET_LIST_NAME) {
+    calendars = [await Calendar.findList(TARGET_LIST_NAME)];
+  }
+  const incomplete = await Reminder.allIncomplete(calendars);
+  const completed  = await Reminder.allCompleted(calendars);
 
-// --- 1. データ取得 ---
-let calendars = undefined;
-if (TARGET_LIST_NAME) {
-const c = await Calendar.findList(TARGET_LIST_NAME);
-calendars = [c];
-}
-const incomplete = await Reminder.allIncomplete(calendars);
-const completed = await Reminder.allCompleted(calendars);
+  // --- 日付 ---
+  const now        = new Date();
+  const curYear    = now.getFullYear();
+  const curMonth   = now.getMonth();
+  const yesterday  = new Date(now); yesterday.setDate(now.getDate() - 1);
+  const lastMonthD = new Date(curYear, curMonth - 1, 1);
+  const lastYear   = curYear - 1;
 
-// --- 2. 日付計算 ---
-const now = new Date();
-const currentYear = now.getFullYear();
-const currentMonth = now.getMonth();
-const currentDate = now.getDate();
-const yesterdayDate = new Date(now);
-yesterdayDate.setDate(currentDate - 1);
+  // --- 集計ヘルパー ---
+  const cntDone = (fn) => completed.filter(r => r.completionDate && fn(r.completionDate)).length;
+  const cntDue  = (fn) => incomplete.filter(r => r.dueDate       && fn(r.dueDate)).length;
 
-const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
-const lastMonthYear = lastMonthDate.getFullYear();
-const lastMonthMonth = lastMonthDate.getMonth();
-const lastYear = currentYear - 1;
+  // 今日
+  const doneToday  = cntDone(d => isSameDay(d, now));
+  const dueToday   = cntDue (d => isSameDay(d, now));
+  const totalToday = doneToday + dueToday;
+  const doneYest   = cntDone(d => isSameDay(d, yesterday));
+  const diffDay    = totalToday - doneYest;
 
-// 判定ヘルパー
-const isSameDay = (d, t) => d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
-const isSameMonth = (d, y, m) => d.getMonth() === m && d.getFullYear() === y;
-const isSameYear = (d, y) => d.getFullYear() === y;
+  // 今月
+  const doneMonth  = cntDone(d => isSameMonth(d, curYear, curMonth));
+  const dueMonth   = cntDue (d => isSameMonth(d, curYear, curMonth));
+  const totalMonth = doneMonth + dueMonth;
+  const lmY = lastMonthD.getFullYear(), lmM = lastMonthD.getMonth();
+  const doneLM     = cntDone(d => isSameMonth(d, lmY, lmM));
+  const dueLM      = cntDue (d => isSameMonth(d, lmY, lmM));
+  const diffMonth  = totalMonth - (doneLM + dueLM);
 
-// --- 3. 集計ロジック ---
+  // 今年
+  const doneYear  = cntDone(d => isSameYear(d, curYear));
+  const dueYear   = cntDue (d => isSameYear(d, curYear));
+  const totalYear = doneYear + dueYear;
+  const doneLY    = cntDone(d => isSameYear(d, lastYear));
+  const dueLY     = cntDue (d => isSameYear(d, lastYear));
+  const diffYear  = totalYear - (doneLY + dueLY);
 
-// 【A. 今日・昨日】
-const doneToday = completed.filter(r => r.completionDate && isSameDay(r.completionDate, now)).length;
-const dueToday = incomplete.filter(r => r.dueDate && isSameDay(r.dueDate, now)).length;
-const totalToday = doneToday + dueToday;
+  // 過去7日の完了数（グラフ用）
+  const DAYS = 7;
+  const dailyCounts = [];
+  for (let i = DAYS - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    dailyCounts.push({ date: d, count: cntDone(cd => isSameDay(cd, d)) });
+  }
 
-const doneYesterday = completed.filter(r => r.completionDate && isSameDay(r.completionDate, yesterdayDate)).length;
-const totalYesterday = doneYesterday;
-const diffYesterday = totalToday - totalYesterday;
+  // ==================== 描画 ====================
 
-// 【B. 今月・先月】
-const doneMonth = completed.filter(r => r.completionDate && isSameMonth(r.completionDate, currentYear, currentMonth)).length;
-const dueMonth = incomplete.filter(r => r.dueDate && isSameMonth(r.dueDate, currentYear, currentMonth)).length;
-const totalMonth = doneMonth + dueMonth;
+  // ヘッダー
+  const headerStack = widget.addStack();
+  headerStack.centerAlignContent();
+  const icon = headerStack.addImage(SFSymbol.named("square.grid.2x2.fill").image);
+  icon.tintColor    = COLOR_DUE;
+  icon.imageSize    = new Size(14, 14);
+  headerStack.addSpacer(5);
+  const titleText   = headerStack.addText("Task Grid");
+  titleText.font    = Font.semiboldSystemFont(13);
+  titleText.textColor = COLOR_MAIN_VAL;
+  headerStack.addSpacer();
 
-const doneLastMonth = completed.filter(r => r.completionDate && isSameMonth(r.completionDate, lastMonthYear, lastMonthMonth)).length;
-const dueLastMonth = incomplete.filter(r => r.dueDate && isSameMonth(r.dueDate, lastMonthYear, lastMonthMonth)).length;
-const totalLastMonth = doneLastMonth + dueLastMonth;
-const diffMonth = totalMonth - totalLastMonth;
+  widget.addSpacer(6);
 
-// 【C. 今年・昨年】
-const doneYear = completed.filter(r => r.completionDate && isSameYear(r.completionDate, currentYear)).length;
-const dueYear = incomplete.filter(r => r.dueDate && isSameYear(r.dueDate, currentYear)).length;
-const totalYear = doneYear + dueYear;
+  // ── 統計行：今日 | 今月 | 今年 ──
+  const statsRow = widget.addStack();
+  statsRow.layoutHorizontally();
+  statsRow.centerAlignContent();
 
-const doneLastYear = completed.filter(r => r.completionDate && isSameYear(r.completionDate, lastYear)).length;
-const dueLastYear = incomplete.filter(r => r.dueDate && isSameYear(r.dueDate, lastYear)).length;
-const totalLastYear = doneLastYear + dueLastYear;
-const diffYear = totalYear - totalLastYear;
+  addStatColumn(statsRow, "今日", dueToday,  totalToday, diffDay,   "昨日比");
+  addColumnDivider(statsRow);
+  addStatColumn(statsRow, "今月", dueMonth,  totalMonth, diffMonth, "先月比");
+  addColumnDivider(statsRow);
+  addStatColumn(statsRow, "今年", dueYear,   totalYear,  diffYear,  "昨年比");
 
-// --- 4. ウィジェット描画 ---
+  widget.addSpacer(6);
+  addHorizontalLine(widget);
+  widget.addSpacer(4);
 
-// === ヘッダー ===
-let headerStack = widget.addStack();
-headerStack.centerAlignContent();
+  // ── 棒グラフ：過去7日の完了タスク ──
+  const chartHeader = widget.addStack();
+  chartHeader.centerAlignContent();
+  const chartLabel  = chartHeader.addText("完了タスク（過去7日）");
+  chartLabel.font   = Font.systemFont(8);
+  chartLabel.textColor = COLOR_SUB_TEXT;
+  chartHeader.addSpacer();
 
-let symbol = SFSymbol.named("square.grid.2x2.fill");
-let iconImg = headerStack.addImage(symbol.image);
-iconImg.tintColor = COLOR_DUE;
-iconImg.imageSize = new Size(16, 16);
+  widget.addSpacer(3);
 
-headerStack.addSpacer(5);
+  const chartImage = drawBarChart(dailyCounts, 286, 44);
+  const chartView  = widget.addImage(chartImage);
+  chartView.resizable = false;
 
-let title = headerStack.addText("Task Grid");
-title.font = Font.semiboldSystemFont(15);
-title.textColor = COLOR_MAIN_VAL;
-
-headerStack.addSpacer();
-
-// ヘッダー下の余白
-widget.addSpacer(6);
-
-// === グリッド構築 ===
-
-// 上段：今日
-let topSection = widget.addStack();
-topSection.layoutHorizontally();
-topSection.centerAlignContent();
-
-addStatItem(topSection, "今日の残り", `${dueToday}`, COLOR_DUE);
-addDivider(topSection);
-addStatItem(topSection, "今日の総数", `${totalToday}`, COLOR_MAIN_VAL);
-addDivider(topSection);
-addDiffItem(topSection, "昨日比", diffYesterday);
-
-// 行間の余白
-widget.addSpacer(4);
-addHorizontalDivider(widget);
-widget.addSpacer(4);
-
-// 中段：今月
-let midSection = widget.addStack();
-midSection.layoutHorizontally();
-midSection.centerAlignContent();
-
-addStatItem(midSection, "今月の残り", `${dueMonth}`, COLOR_DUE);
-addDivider(midSection);
-addStatItem(midSection, "今月の総数", `${totalMonth}`, COLOR_MAIN_VAL);
-addDivider(midSection);
-addDiffItem(midSection, "先月比", diffMonth);
-
-// 行間の余白
-widget.addSpacer(4);
-addHorizontalDivider(widget);
-widget.addSpacer(4);
-
-// 下段：今年
-let botSection = widget.addStack();
-botSection.layoutHorizontally();
-botSection.centerAlignContent();
-
-addStatItem(botSection, "今年の残り", `${dueYear}`, COLOR_DUE);
-addDivider(botSection);
-addStatItem(botSection, "今年の総数", `${totalYear}`, COLOR_MAIN_VAL);
-addDivider(botSection);
-addDiffItem(botSection, "昨年比", diffYear);
-
-return widget;
+  return widget;
 }
 
 // --------------------------------------------------
-// ヘルパー関数
+// 統計カラム（期間ラベル / 残り大 / 総数+差分）
 // --------------------------------------------------
+function addStatColumn(container, period, remaining, total, diff, diffLabel) {
+  const wrapper = container.addStack();
+  wrapper.layoutVertically();
+  wrapper.size = new Size(86, 0);
 
-function addStatItem(container, label, value, color, isBold = false) {
-let wrapper = container.addStack();
-wrapper.layoutVertically();
-wrapper.size = new Size(86, 0);
+  // 期間ラベル
+  addCentered(wrapper, period, Font.semiboldSystemFont(9), COLOR_SUB_TEXT);
+  wrapper.addSpacer(1);
 
-// 値
-let valStack = wrapper.addStack();
-valStack.layoutHorizontally();
-valStack.addSpacer();
+  // 残り（大きく）
+  addCentered(wrapper, `${remaining}`, Font.boldSystemFont(20), COLOR_DUE);
 
-let valText = valStack.addText(value);
-if (isBold) {
-valText.font = Font.boldSystemFont(18);
-} else {
-valText.font = Font.systemFont(18);
-}
-valText.textColor = color;
+  // 総数 + 差分
+  const subStack = wrapper.addStack();
+  subStack.layoutHorizontally();
+  subStack.addSpacer();
 
-valStack.addSpacer();
+  const sign      = diff > 0 ? "+" : "";
+  const diffColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
 
-wrapper.addSpacer(1);
+  const tTotal = subStack.addText(`${total}`);
+  tTotal.font       = Font.systemFont(10);
+  tTotal.textColor  = COLOR_MAIN_VAL;
 
-// ラベル
-let labStack = wrapper.addStack();
-labStack.layoutHorizontally();
-labStack.addSpacer();
+  const tSep = subStack.addText("  ");
+  tSep.font      = Font.systemFont(10);
+  tSep.textColor = COLOR_SUB_TEXT;
 
-let labText = labStack.addText(label);
-labText.font = Font.systemFont(9);
-labText.textColor = COLOR_SUB_TEXT;
+  const tDiff = subStack.addText(`${sign}${diff}`);
+  tDiff.font      = Font.systemFont(10);
+  tDiff.textColor = diffColor;
 
-labStack.addSpacer();
-}
+  subStack.addSpacer();
 
-function addDiffItem(container, label, diffValue) {
-let wrapper = container.addStack();
-wrapper.layoutVertically();
-wrapper.size = new Size(86, 0);
-
-// 値
-let valStack = wrapper.addStack();
-valStack.layoutHorizontally();
-valStack.addSpacer();
-
-let sign = diffValue > 0 ? "+" : "";
-let valStr = `${sign}${diffValue}`;
-
-let color = COLOR_MAIN_VAL;
-if (diffValue > 0) color = COLOR_ACCENT;
-if (diffValue < 0) color = COLOR_MINUS;
-
-let valText = valStack.addText(valStr);
-valText.font = Font.systemFont(18);
-valText.textColor = color;
-
-valStack.addSpacer();
-
-wrapper.addSpacer(1);
-
-// ラベル
-let labStack = wrapper.addStack();
-labStack.layoutHorizontally();
-labStack.addSpacer();
-
-let labText = labStack.addText(label);
-labText.font = Font.systemFont(9);
-labText.textColor = COLOR_SUB_TEXT;
-
-labStack.addSpacer();
+  // 凡例ラベル
+  wrapper.addSpacer(1);
+  addCentered(wrapper, `総数  ${diffLabel}`, Font.systemFont(7), new Color("#8e8e93", 0.55));
 }
 
-function addDivider(container) {
-container.addSpacer();
-let divider = container.addStack();
-divider.size = new Size(1, 12);
-divider.backgroundColor = new Color("#3a3a3c");
-container.addSpacer();
+function addCentered(container, text, font, color) {
+  const s = container.addStack();
+  s.addSpacer();
+  const t = s.addText(text);
+  t.font      = font;
+  t.textColor = color;
+  s.addSpacer();
 }
 
-function addHorizontalDivider(widget) {
-let stack = widget.addStack();
-stack.layoutHorizontally();
-stack.addSpacer();
-let divider = stack.addStack();
-// 【修正】パディング増に合わせて長さを少し調整 (280 -> 260)
-divider.size = new Size(280, 0.5);
-divider.backgroundColor = new Color("#3a3a3c");
-divider.alpha = 0.5;
-stack.addSpacer();
+// --------------------------------------------------
+// バーチャート描画（DrawContext）
+// --------------------------------------------------
+function drawBarChart(data, width, height) {
+  const ctx = new DrawContext();
+  ctx.size              = new Size(width, height);
+  ctx.opaque            = false;
+  ctx.respectScreenScale = true;
+
+  const n        = data.length;
+  const LABEL_H  = 12;
+  const NUM_H    = 10;
+  const chartH   = height - LABEL_H;           // ラベル領域を除いた描画高さ
+  const maxVal   = Math.max(...data.map(d => d.count), 1);
+  const slotW    = width / n;
+  const barW     = Math.floor(slotW * 0.55);
+  const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+
+  for (let i = 0; i < n; i++) {
+    const { date, count } = data[i];
+    const isToday = i === n - 1;
+
+    // バー X 座標（スロット中央に配置）
+    const bx = Math.floor(i * slotW + (slotW - barW) / 2);
+
+    // バーの高さ（数字ラベル分の余白を確保）
+    const maxBarH = chartH - NUM_H - 2;
+    const barH    = count > 0 ? Math.max(Math.round((count / maxVal) * maxBarH), 2) : 0;
+    const by      = chartH - barH;
+
+    // バーを描画
+    ctx.setFillColor(isToday ? COLOR_ACCENT : new Color("#30d158", 0.30));
+    ctx.fillRect(new Rect(bx, by, barW, barH));
+
+    // カウントラベル（バー上部）
+    if (count > 0) {
+      ctx.setFont(Font.systemFont(7));
+      ctx.setTextColor(isToday ? COLOR_MAIN_VAL : new Color("#8e8e93", 0.75));
+      ctx.setTextAlignedCenter();
+      ctx.drawTextInRect(`${count}`, new Rect(i * slotW, Math.max(by - NUM_H, 0), slotW, NUM_H));
+    }
+
+    // 曜日ラベル（下端）
+    ctx.setFont(Font.systemFont(8));
+    ctx.setTextColor(isToday ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
+    ctx.setTextAlignedCenter();
+    ctx.drawTextInRect(dayNames[date.getDay()], new Rect(i * slotW, chartH + 1, slotW, LABEL_H));
+  }
+
+  return ctx.getImage();
+}
+
+// --------------------------------------------------
+// 区切り線
+// --------------------------------------------------
+function addColumnDivider(container) {
+  container.addSpacer();
+  const d = container.addStack();
+  d.size            = new Size(1, 34);
+  d.backgroundColor = COLOR_DIVIDER;
+  container.addSpacer();
+}
+
+function addHorizontalLine(widget) {
+  const s = widget.addStack();
+  s.layoutHorizontally();
+  s.addSpacer();
+  const d = s.addStack();
+  d.size            = new Size(280, 0.5);
+  d.backgroundColor = COLOR_DIVIDER;
+  d.alpha           = 0.5;
+  s.addSpacer();
 }
