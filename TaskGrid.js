@@ -220,25 +220,13 @@ function drawDonutChart(done, due, size) {
     // 完了タスク（緑）
     if (done > 0) {
       const doneEndAngle = startAngle + (done / total) * 2 * Math.PI;
-      const p = new Path();
-      p.move(center);
-      p.addArc(center, outerR, startAngle, doneEndAngle, true);
-      p.closeSubpath();
-      ctx.addPath(p);
-      ctx.setFillColor(COLOR_ACCENT);
-      ctx.fillPath();
+      fillArcSegment(ctx, center, outerR, startAngle, doneEndAngle, COLOR_ACCENT);
     }
 
     // 残りタスク（青）
     if (due > 0) {
       const dueStartAngle = startAngle + (done / total) * 2 * Math.PI;
-      const p = new Path();
-      p.move(center);
-      p.addArc(center, outerR, dueStartAngle, startAngle + 2 * Math.PI, true);
-      p.closeSubpath();
-      ctx.addPath(p);
-      ctx.setFillColor(COLOR_DUE);
-      ctx.fillPath();
+      fillArcSegment(ctx, center, outerR, dueStartAngle, startAngle + 2 * Math.PI, COLOR_DUE);
     }
   }
 
@@ -262,6 +250,25 @@ function drawDonutChart(done, due, size) {
   ctx.drawTextInRect(label, new Rect(0, size / 2 - tH / 2, size, tH));
 
   return ctx.getImage();
+}
+
+// Path.addArc が使えないため、多角形で弧を近似して塗り潰す
+function fillArcSegment(ctx, center, outerR, startAngle, endAngle, color) {
+  const STEPS = 60;
+  const step  = (endAngle - startAngle) / STEPS;
+  const p = new Path();
+  p.move(center);
+  for (let i = 0; i <= STEPS; i++) {
+    const a = startAngle + i * step;
+    p.addLine(new Point(
+      center.x + outerR * Math.cos(a),
+      center.y + outerR * Math.sin(a)
+    ));
+  }
+  p.closeSubpath();
+  ctx.addPath(p);
+  ctx.setFillColor(color);
+  ctx.fillPath();
 }
 
 // --------------------------------------------------
