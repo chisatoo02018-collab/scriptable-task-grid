@@ -8,14 +8,13 @@ const COLOR_MINUS    = new Color("#ff453a");    // 赤（マイナス）
 const COLOR_MAIN_VAL = new Color("#ffffff");    // メイン数字
 const COLOR_SUB_TEXT = new Color("#8e8e93");    // サブテキスト
 const COLOR_BG       = new Color("#1c1c1e");    // 背景
-const COLOR_DUE      = new Color("#0a84ff");    // 残りタスク（青）
+const COLOR_DUE         = new Color("#0a84ff");    // 残りタスク（青）
+const COLOR_YELLOW_GREEN = new Color("#aaed6f");   // 消費済み時間（黄緑）
 const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
 const DONUT_SIZE     = 50;                      // ドーナツグラフのサイズ（pt）
-const GAUGE_SIZE     = 36;                      // 円形ゲージのサイズ（pt）
+const GAUGE_SIZE     = 46;                      // 円形ゲージのサイズ（pt）
 
 // ── 個人設定（寿命ゲージ用） ──
-const BIRTH_YEAR        = 1990;  // ← 生まれ年を設定
-const LIFE_EXPECTANCY   = 90;    // ← 想定寿命（年）
 const HEART_IMAGE_BASE64 = "";   // ← base64エンコード画像を設定（空欄=LifeMerterから自動取得）
 
 // ==========================================
@@ -95,13 +94,13 @@ async function createWidget() {
 
   // 円形ゲージ用データ
   const daysInMonth  = new Date(curYear, curMonth + 1, 0).getDate();
-  const endOfMonth   = new Date(curYear, curMonth + 1, 0, 23, 59, 59);
-  const monthRemainH = Math.ceil((endOfMonth - now) / (1000 * 60 * 60));
-  const monthElapsed  = 1 - monthRemainH / (daysInMonth * 24);  // 消費済み割合
+  const monthStart   = new Date(curYear, curMonth, 1);
+  const monthElapsed = (now - monthStart) / (daysInMonth * 24 * 3600000);  // 消費済み割合
+  const monthRemainH = Math.ceil((daysInMonth * 24) * (1 - monthElapsed));
 
-  const age          = curYear - BIRTH_YEAR;
-  const lifeRemain   = Math.max(LIFE_EXPECTANCY - age, 0);
-  const lifeElapsed  = age / LIFE_EXPECTANCY;                   // 消費済み割合
+  const LIFE_START   = new Date(2003, 1, 18);   // 2003/02/18
+  const LIFE_END     = new Date(2083, 1, 18);   // 2083/02/18
+  const lifeElapsed  = (now - LIFE_START) / (LIFE_END - LIFE_START);  // 消費済み割合
 
   const heartImage   = await loadHeartImage();
 
@@ -123,7 +122,7 @@ async function createWidget() {
   statsRow.layoutHorizontally();
   statsRow.centerAlignContent();
 
-  const todayLabel = `${curMonth + 1}/${now.getDate()}`;
+  const todayLabel = `${curYear}/${curMonth + 1}/${now.getDate()}`;
   addDonutColumn(statsRow, doneToday, dueToday, diffDay, centerTotal, todayLabel);
   statsRow.addSpacer(6);
   const statDiv = statsRow.addStack();
@@ -167,12 +166,12 @@ async function createWidget() {
   gaugeRow.centerAlignContent();
   gaugeRow.addSpacer(7);  // donut center-X = 7 + GAUGE_SIZE/2 = 25pt = DONUT_SIZE/2 ✓
 
-  addGaugeColumn(gaugeRow, "今月残", monthElapsed, GAUGE_SIZE,
-    new Color("#2c2c2e"), COLOR_ACCENT,
+  addGaugeColumn(gaugeRow, monthElapsed, GAUGE_SIZE,
+    COLOR_DUE, COLOR_YELLOW_GREEN,
     { type: "text", value: `${monthRemainH}h` });
   gaugeRow.addSpacer(8);
-  addGaugeColumn(gaugeRow, "寿命", lifeElapsed, GAUGE_SIZE,
-    new Color("#2c2c2e"), COLOR_ACCENT,
+  addGaugeColumn(gaugeRow, lifeElapsed, GAUGE_SIZE,
+    COLOR_DUE, COLOR_YELLOW_GREEN,
     { type: "image", value: heartImage });
 
   bottomRow.addSpacer();  // 折れ線グラフ列の直下に自然に揃う
@@ -213,7 +212,7 @@ function addDonutColumn(container, done, due, diff, centerVal, dateLabel) {
   textCol.layoutVertically();
 
   const t1 = textCol.addText(dateLabel);
-  t1.font      = Font.semiboldSystemFont(11);
+  t1.font      = Font.systemFont(9);
   t1.textColor = COLOR_MAIN_VAL;
 
   textCol.addSpacer(5);
@@ -451,14 +450,10 @@ function drawLineChart(data, width, height, curMonthIdx) {
   return ctx.getImage();
 }
 
-function addGaugeColumn(container, label, progress, size, trackColor, fillColor, centerContent) {
+function addGaugeColumn(container, progress, size, trackColor, fillColor, centerContent) {
   const col = container.addStack();
   col.layoutVertically();
   col.centerAlignContent();
-  const lbl = col.addText(label);
-  lbl.font = Font.systemFont(7);
-  lbl.textColor = COLOR_SUB_TEXT;
-  col.addSpacer(2);
   const img = col.addImage(drawRingGauge(progress, size, trackColor, fillColor, centerContent));
   img.imageSize = new Size(size, size);
   img.resizable = false;
@@ -472,7 +467,7 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
 
   const center = new Point(size / 2, size / 2);
   const outerR = size / 2 - 0.5;
-  const innerR = outerR - 5;            // リング幅 5pt
+  const innerR = outerR - 4;            // リング幅 4pt（細め）
   const startAngle = -(Math.PI / 2);
 
   // トラック（背景リング）
