@@ -40,7 +40,6 @@ function isSameDay(d, t) {
       && d.getFullYear() === t.getFullYear();
 }
 function isSameMonth(d, y, m) { return d.getMonth() === m && d.getFullYear() === y; }
-function isSameYear(d, y)     { return d.getFullYear() === y; }
 
 // --------------------------------------------------
 // メインウィジェット
@@ -105,11 +104,11 @@ async function createWidget() {
   const daysInMonth  = new Date(curYear, curMonth + 1, 0).getDate();
   const monthStart   = new Date(curYear, curMonth, 1);
   const monthElapsed = (now - monthStart) / (daysInMonth * 24 * 3600000);  // 消費済み割合
-  const monthRemainH = Math.ceil((daysInMonth * 24) * (1 - monthElapsed));
+  const monthRemainH = Math.max(0, Math.ceil((daysInMonth * 24) * (1 - monthElapsed)));
 
   const LIFE_START   = new Date(BIRTH_YEAR, BIRTH_MONTH - 1, BIRTH_DAY);
   const LIFE_END     = new Date(BIRTH_YEAR + LIFE_YEARS, BIRTH_MONTH - 1, BIRTH_DAY);
-  const lifeElapsed  = (now - LIFE_START) / (LIFE_END - LIFE_START);  // 消費済み割合
+  const lifeElapsed  = Math.min(1, (now - LIFE_START) / (LIFE_END - LIFE_START));  // 消費済み割合
 
   const heartImage   = await loadHeartImage();
 
@@ -741,13 +740,6 @@ function addLegendDot(container, color, label, textColor = COLOR_SUB_TEXT) {
 // --------------------------------------------------
 // 区切り線
 // --------------------------------------------------
-function addColumnDivider(container) {
-  container.addSpacer();
-  const d = container.addStack();
-  d.size            = new Size(1, 58);
-  d.backgroundColor = COLOR_DIVIDER;
-  container.addSpacer();
-}
 
 function addHorizontalLine(widget) {
   const d = widget.addStack();
