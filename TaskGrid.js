@@ -122,8 +122,9 @@ async function createWidget() {
   statsRow.layoutHorizontally();
   statsRow.centerAlignContent();
 
-  const todayLabel = `${curYear}/${curMonth + 1}/${now.getDate()}`;
-  addDonutColumn(statsRow, doneToday, dueToday, diffDay, centerTotal, todayLabel);
+  const todayYear  = `${curYear}`;
+  const todayDate  = `${curMonth + 1}/${now.getDate()}`;
+  addDonutColumn(statsRow, doneToday, dueToday, diffDay, centerTotal, todayYear, todayDate);
   statsRow.addSpacer(6);
   const statDiv = statsRow.addStack();
   statDiv.size = new Size(1, 62);
@@ -194,7 +195,7 @@ async function createWidget() {
 // ドーナツカラム
 // --------------------------------------------------
 // done/due はドーナツ弧の色分け用、centerVal は中央表示値、dateLabel は日付文字列
-function addDonutColumn(container, done, due, diff, centerVal, dateLabel) {
+function addDonutColumn(container, done, due, diff, centerVal, dateYear, dateDay) {
   const wrapper = container.addStack();
   wrapper.layoutHorizontally();
   wrapper.centerAlignContent();
@@ -211,11 +212,15 @@ function addDonutColumn(container, done, due, diff, centerVal, dateLabel) {
   const textCol = wrapper.addStack();
   textCol.layoutVertically();
 
-  const t1 = textCol.addText(dateLabel);
-  t1.font      = Font.systemFont(9);
-  t1.textColor = COLOR_MAIN_VAL;
+  const t1 = textCol.addText(dateYear);
+  t1.font      = Font.systemFont(8);
+  t1.textColor = COLOR_SUB_TEXT;
+  textCol.addSpacer(1);
+  const t2 = textCol.addText(dateDay);
+  t2.font      = Font.semiboldSystemFont(10);
+  t2.textColor = COLOR_MAIN_VAL;
 
-  textCol.addSpacer(5);
+  textCol.addSpacer(4);
 
   const row2 = textCol.addStack();
   row2.layoutHorizontally();
@@ -473,9 +478,9 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
   // トラック（背景リング）
   fillArcSegment(ctx, center, outerR, startAngle, startAngle + 2 * Math.PI, trackColor);
 
-  // 進捗弧（残り分）
+  // 進捗弧（消費済み・反時計回り＝上から左へ）
   if (progress > 0.005) {
-    fillArcSegment(ctx, center, outerR, startAngle, startAngle + progress * 2 * Math.PI, fillColor);
+    fillArcSegment(ctx, center, outerR, startAngle - progress * 2 * Math.PI, startAngle, fillColor);
   }
 
   // 中心をくり抜いてリング形状に
