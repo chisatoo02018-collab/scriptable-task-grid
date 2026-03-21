@@ -280,7 +280,7 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
     lblBox.size = new Size(30, 0);
     const lbl = lblBox.addText(label);
     lbl.font      = Font.systemFont(6);
-    lbl.textColor = COLOR_SUB_TEXT;
+    lbl.textColor = color === COLOR_SUB_TEXT ? COLOR_SUB_TEXT : COLOR_MAIN_VAL;
     const numBox = row.addStack();
     numBox.size = new Size(22, 0);
     numBox.addSpacer();
