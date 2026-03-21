@@ -48,7 +48,7 @@ function isSameYear(d, y)     { return d.getFullYear() === y; }
 async function createWidget() {
   const widget = new ListWidget();
   widget.backgroundColor = COLOR_BG;
-  widget.setPadding(3, 5, 5, 4);
+  widget.setPadding(3, 5, 2, 4);
 
   // --- データ取得 ---
   let calendars;
@@ -231,7 +231,7 @@ async function createWidget() {
   // 下段の仕切り線（2 + 112 + 6 = 120pt → 上段と同じ位置）
   bottomRow.addSpacer(6);
   const bottomDiv = bottomRow.addStack();
-  bottomDiv.size = new Size(1, 63);  // label(9) + spacer(2) + gauge(52)
+  bottomDiv.size = new Size(1, 65);  // label(8) + spacer(2) + gauge(55)
   bottomDiv.backgroundColor = COLOR_DIVIDER;
   bottomRow.addSpacer(8);
 
@@ -243,8 +243,8 @@ async function createWidget() {
   barLabel.textColor = COLOR_MAIN_VAL;
   barCol.addSpacer(2);
   const barContainer = barCol.addStack();
-  barContainer.size = new Size(0, 52);  // 幅:カラム追従、高さ:ゲージ行に合わせる
-  const chartImage = drawBarChart(weekData, 195, 52);
+  barContainer.size = new Size(0, 55);  // 幅:カラム追従、高さ:ゲージ行に合わせる
+  const chartImage = drawBarChart(weekData, 195, 55);
   const chartView  = barContainer.addImage(chartImage);
   chartView.resizable = true;
 
@@ -440,7 +440,7 @@ function drawBarChart(data, width, height) {
   ctx.respectScreenScale = true;
 
   const n           = data.length;
-  const LABEL_H     = 6;                 // 曜日ラベル領域
+  const LABEL_H     = 8;                 // 曜日ラベル領域
   const BAR_YAXIS_W = 12;                // 右端Y軸ラベル領域
   const CAP_VAL     = 15;
   const chartH      = height - LABEL_H;
