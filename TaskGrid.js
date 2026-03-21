@@ -11,7 +11,7 @@ const COLOR_BG       = new Color("#1c1c1e");    // 背景
 const COLOR_DUE         = new Color("#0a84ff");    // 残りタスク（青）
 const COLOR_YELLOW_GREEN = new Color("#aaed6f");   // 消費済み時間（黄緑）
 const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
-const DONUT_SIZE     = 50;                      // ドーナツグラフのサイズ（pt）
+const DONUT_SIZE     = 46;                      // ドーナツグラフのサイズ（pt）
 const GAUGE_SIZE     = 46;                      // 円形ゲージのサイズ（pt）
 
 // ── 個人設定（寿命ゲージ用） ──
@@ -124,7 +124,8 @@ async function createWidget() {
 
   statsRow.addSpacer(5);  // 上段を少し右へオフセット
   const todayYear  = `${curYear}`;
-  const todayDate  = `${curMonth + 1}/${now.getDate()}`;
+  const mins       = String(now.getMinutes()).padStart(2, '0');
+  const todayDate  = `${curMonth + 1}/${now.getDate()} ${now.getHours()}:${mins}`;
   addDonutColumn(statsRow, doneToday, dueToday, diffDay, centerTotal, todayYear, todayDate);
   statsRow.addSpacer(6);
   const statDiv = statsRow.addStack();
@@ -208,9 +209,9 @@ function addDonutColumn(container, done, due, diff, centerVal, dateYear, dateDay
   imgView.imageSize = new Size(DONUT_SIZE, DONUT_SIZE);
   imgView.resizable = false;
 
-  wrapper.addSpacer(8);
+  wrapper.addSpacer(6);
 
-  // テキスト列（右）— ラベル左寄せ・数値右寄せで「お尻」を揃える
+  // テキスト列（右）— 46pt 高さに収まるようスペーサー最小化
   const textCol = wrapper.addStack();
   textCol.layoutVertically();
 
@@ -222,33 +223,33 @@ function addDonutColumn(container, done, due, diff, centerVal, dateYear, dateDay
   dateRow.layoutHorizontally();
   dateRow.addSpacer();
   const t2 = dateRow.addText(dateDay);
-  t2.font      = Font.semiboldSystemFont(10);
+  t2.font      = Font.systemFont(8);
   t2.textColor = COLOR_MAIN_VAL;
 
-  textCol.addSpacer(4);
+  textCol.addSpacer(3);
 
   const row2 = textCol.addStack();
   row2.layoutHorizontally();
   const l2 = row2.addText("残件:");
-  l2.font      = Font.systemFont(9);
+  l2.font      = Font.systemFont(8);
   l2.textColor = COLOR_SUB_TEXT;
   row2.addSpacer();
   const v2 = row2.addText(`${due}`);
-  v2.font      = Font.systemFont(9);
+  v2.font      = Font.systemFont(8);
   v2.textColor = due > 0 ? COLOR_DUE : COLOR_SUB_TEXT;
 
-  textCol.addSpacer(4);
+  textCol.addSpacer(3);
 
   const sign   = diff > 0 ? "+" : "";
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
   const row3 = textCol.addStack();
   row3.layoutHorizontally();
   const l3 = row3.addText("日比:");
-  l3.font      = Font.systemFont(9);
+  l3.font      = Font.systemFont(8);
   l3.textColor = COLOR_SUB_TEXT;
   row3.addSpacer();
   const v3 = row3.addText(`${sign}${diff}`);
-  v3.font      = Font.systemFont(9);
+  v3.font      = Font.systemFont(8);
   v3.textColor = dColor;
 }
 
@@ -300,7 +301,7 @@ function drawDonutChart(done, due, centerVal, size) {
   ctx.fillPath();
 
   // 中央テキスト：今日の総タスク数
-  const label    = `${centerVal}`;
+  const label    = `${centerVal}件`;
   const fontSize = label.length >= 4 ? 8 : label.length === 3 ? 9 : label.length === 2 ? 10 : 11;
   ctx.setFont(Font.boldSystemFont(fontSize));
   ctx.setTextColor(centerVal > 0 ? COLOR_MAIN_VAL : new Color("#8e8e93", 0.6));
