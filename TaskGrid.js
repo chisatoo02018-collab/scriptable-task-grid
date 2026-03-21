@@ -48,7 +48,7 @@ function isSameYear(d, y)     { return d.getFullYear() === y; }
 async function createWidget() {
   const widget = new ListWidget();
   widget.backgroundColor = COLOR_BG;
-  widget.setPadding(2, 2, 2, 2);
+  widget.setPadding(3, 5, 5, 4);
 
   // --- データ取得 ---
   let calendars;
