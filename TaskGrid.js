@@ -155,7 +155,7 @@ async function createWidget() {
   donutHeader.centerAlignContent();
   donutHeader.addSpacer();
   const dhLabel = donutHeader.addText(todayDate);
-  dhLabel.font      = Font.systemFont(7);
+  dhLabel.font      = Font.systemFont(8);
   dhLabel.textColor = COLOR_MAIN_VAL;
   donutHeader.addSpacer();
 
@@ -177,7 +177,7 @@ async function createWidget() {
   lineHeader.layoutHorizontally();
   lineHeader.centerAlignContent();
   const lhLabel = lineHeader.addText("月次タスク数");
-  lhLabel.font = Font.systemFont(7);
+  lhLabel.font = Font.systemFont(8);
   lhLabel.textColor = COLOR_MAIN_VAL;
   lineHeader.addSpacer(6);
   addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}（${totalThis}件）`, COLOR_MAIN_VAL);
@@ -210,7 +210,7 @@ async function createWidget() {
   gLabelRow.layoutHorizontally();
   gLabelRow.addSpacer();
   const gLabel = gLabelRow.addText("消費時間");
-  gLabel.font      = Font.systemFont(7);
+  gLabel.font      = Font.systemFont(8);
   gLabel.textColor = COLOR_MAIN_VAL;
   gLabelRow.addSpacer();
   gaugeBlock.addSpacer(2);
@@ -239,7 +239,7 @@ async function createWidget() {
   const barCol = bottomRow.addStack();
   barCol.layoutVertically();
   const barLabel = barCol.addText("日次タスク数");
-  barLabel.font = Font.systemFont(7);
+  barLabel.font = Font.systemFont(8);
   barLabel.textColor = COLOR_MAIN_VAL;
   barCol.addSpacer(2);
   const barContainer = barCol.addStack();
@@ -399,7 +399,7 @@ function drawDonutChart(done, due, centerVal, size) {
   // 中央テキスト（\n で複数行対応）
   ctx.setTextAlignedCenter();
   const lines = String(centerVal).split('\n');
-  const fSize  = 10;
+  const fSize  = 9;
   const lineH  = fSize + 2;
   const totalH = lines.length * lineH + (lines.length - 1);
   ctx.setTextColor(COLOR_MAIN_VAL);
