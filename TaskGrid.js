@@ -137,11 +137,13 @@ async function createWidget() {
   const donutHeader = donutCol.addStack();
   donutHeader.layoutHorizontally();
   donutHeader.centerAlignContent();
+  donutHeader.addSpacer();
   const dhLabel = donutHeader.addText(todayDate);
   dhLabel.font      = Font.systemFont(8);
-  dhLabel.textColor = COLOR_MAIN_VAL;
+  dhLabel.textColor = COLOR_SUB_TEXT;   // 月次タスク数ラベルと同じグレー
+  donutHeader.addSpacer();
 
-  donutCol.addSpacer(14);  // ドーナツを中心寄りに押し下げ
+  donutCol.addSpacer(2);  // 折れ線グラフ開始位置に揃える
   addDonutColumn(donutCol, doneToday, dueToday, diffDay, centerTotal);
 
   statsRow.addSpacer(6);
@@ -180,24 +182,36 @@ async function createWidget() {
   bottomRow.layoutHorizontally();
   bottomRow.centerAlignContent();
 
-  // 円形ゲージ（左）
-  const gaugeRow = bottomRow.addStack();
-  gaugeRow.layoutHorizontally();
-  gaugeRow.centerAlignContent();
-  gaugeRow.addSpacer(7);
+  // 円形ゲージ（左）＋「残時間」ラベル
+  bottomRow.addSpacer(7);  // 左マージン
+  const gaugeBlock = bottomRow.addStack();
+  gaugeBlock.layoutVertically();
+  gaugeBlock.size = new Size(100, 0);  // gauge1(46) + gap(8) + gauge2(46)
 
-  addGaugeColumn(gaugeRow, monthElapsed, GAUGE_SIZE,
+  // 残時間ラベル（2つのゲージ中央）
+  const gLabelRow = gaugeBlock.addStack();
+  gLabelRow.layoutHorizontally();
+  gLabelRow.addSpacer();
+  const gLabel = gLabelRow.addText("残時間");
+  gLabel.font      = Font.systemFont(7);
+  gLabel.textColor = COLOR_SUB_TEXT;
+  gLabelRow.addSpacer();
+  gaugeBlock.addSpacer(2);
+
+  // ゲージ行
+  const gaugeInnerRow = gaugeBlock.addStack();
+  gaugeInnerRow.layoutHorizontally();
+  gaugeInnerRow.centerAlignContent();
+  addGaugeColumn(gaugeInnerRow, monthElapsed, GAUGE_SIZE,
     COLOR_DUE, COLOR_YELLOW_GREEN,
     { type: "text", value: `${monthRemainH}h` });
-  gaugeRow.addSpacer(8);
-  addGaugeColumn(gaugeRow, lifeElapsed, GAUGE_SIZE,
+  gaugeInnerRow.addSpacer(8);
+  addGaugeColumn(gaugeInnerRow, lifeElapsed, GAUGE_SIZE,
     COLOR_DUE, COLOR_YELLOW_GREEN,
     { type: "image", value: heartImage });
 
-  // 下段の仕切り線（上段の垂直分割線と横位置を合わせる）
-  // 上段: 5+112+6=123pt、下段: 5(初期)+107(gauges)+11=123pt ✓
-  bottomRow.addSpacer(5);   // 上段の初期スペーサーに合わせる
-  bottomRow.addSpacer(11);  // 分割線前のギャップ
+  // 下段の仕切り線（7 + 100 + 16 = 123pt → 上段と同じ位置）
+  bottomRow.addSpacer(16);
   const bottomDiv = bottomRow.addStack();
   bottomDiv.size = new Size(1, 46);
   bottomDiv.backgroundColor = COLOR_DIVIDER;
@@ -235,16 +249,18 @@ function addDonutColumn(container, done, due, diff, centerVal) {
 
   wrapper.addSpacer(6);
 
-  // テキスト列（右）— 完了/未完了/前日比の3行
+  // テキスト列（右）— 完了/未完了/前日比の3行（固定幅で数値右端を揃える）
   const textCol = wrapper.addStack();
   textCol.layoutVertically();
   textCol.centerAlignContent();
+  textCol.size = new Size(52, 0);  // 112 - donut(54) - gap(6)
 
-  // 数値を右端24ptのボックスに入れて右揃え（3桁分固定）
+  // ラベル前にflexible spacerで右寄せ → 数値右端が常に52pt位置に揃う
   function addLabelRow(col, label, value, color) {
     const row = col.addStack();
     row.layoutHorizontally();
     row.centerAlignContent();
+    row.addSpacer();          // flexible: ラベルを右に押し付ける
     const lbl = row.addText(label);
     lbl.font      = Font.systemFont(7);
     lbl.textColor = COLOR_SUB_TEXT;
