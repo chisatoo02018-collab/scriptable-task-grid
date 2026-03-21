@@ -169,9 +169,9 @@ async function createWidget() {
   lhLabel.font = Font.systemFont(7);
   lhLabel.textColor = COLOR_MAIN_VAL;
   lineHeader.addSpacer();
-  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}（${totalThis}件）`);
+  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}（${totalThis}件）`, COLOR_MAIN_VAL);
   lineHeader.addSpacer(4);
-  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}（${totalPrev}件）`);
+  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}（${totalPrev}件）`, COLOR_SUB_TEXT);
 
   lineCol.addSpacer(2);
   const lineImg = lineCol.addImage(drawLineChart(monthlyData, 195, 65, curMonth));
@@ -305,14 +305,14 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
 
   // 完了セクション
   addHeaderRow(textCol, "完了");
-  addLabelRow(textCol, "時刻指定:", `${doneTimed}`,  doneTimed  > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "終日指定:", `${doneAllday}`, doneAllday > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "時刻指定:", `${doneTimed}`,  doneTimed  > 0 ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "終日指定:", `${doneAllday}`, doneAllday > 0 ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
   // 未完了セクション
   addHeaderRow(textCol, "未完了");
-  addLabelRow(textCol, "時刻指定:", `${timed}`,      timed  > 0 ? COLOR_DUE : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "終日指定:", `${allday}`,     allday > 0 ? COLOR_DUE : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "時刻指定:", `${timed}`,      timed  > 0 ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "終日指定:", `${allday}`,     allday > 0 ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
   // 統計（同階層・左端揃え）
-  addFlatRow(textCol, "完了率:", `${rate}%`, rate > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
+  addFlatRow(textCol, "完了率:", `${rate}%`, rate > 0 ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
   const sign = diff > 0 ? "+" : "";
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
   addFlatRow(textCol, "総数前日比:", `${sign}${diff}`, dColor);
@@ -686,7 +686,7 @@ async function loadHeartImage() {
   return SFSymbol.named("heart.fill").image;
 }
 
-function addLegendDot(container, color, label) {
+function addLegendDot(container, color, label, textColor = COLOR_SUB_TEXT) {
   const dot = container.addStack();
   dot.size = new Size(6, 6);
   dot.backgroundColor = color;
@@ -694,7 +694,7 @@ function addLegendDot(container, color, label) {
   container.addSpacer(2);
   const t = container.addText(label);
   t.font = Font.systemFont(6);
-  t.textColor = COLOR_SUB_TEXT;
+  t.textColor = textColor;
 }
 
 // --------------------------------------------------
