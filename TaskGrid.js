@@ -122,6 +122,7 @@ async function createWidget() {
   statsRow.layoutHorizontally();
   statsRow.centerAlignContent();
 
+  statsRow.addSpacer(5);  // 上段を少し右へオフセット
   const todayYear  = `${curYear}`;
   const todayDate  = `${curMonth + 1}/${now.getDate()}`;
   addDonutColumn(statsRow, doneToday, dueToday, diffDay, centerTotal, todayYear, todayDate);
@@ -154,7 +155,7 @@ async function createWidget() {
 
   widget.addSpacer(4);
   addHorizontalLine(widget);
-  widget.addSpacer(3);
+  widget.addSpacer(8);  // 仕切り線から下段を少し離す
 
   // ── 下段：円形ゲージ（左・ドーナツ下）| 日次バーチャート（右・折れ線下） ──
   const bottomRow = widget.addStack();
@@ -184,9 +185,10 @@ async function createWidget() {
   barLabel.font = Font.systemFont(8);
   barLabel.textColor = COLOR_SUB_TEXT;
   barCol.addSpacer(3);
-  const chartImage = drawBarChart(dailyCounts, 195, 30);
+  const chartImage = drawBarChart(dailyCounts, 195, 44);
   const chartView  = barCol.addImage(chartImage);
   chartView.resizable = false;
+  chartView.imageSize = new Size(195, 44);
 
   return widget;
 }
@@ -332,33 +334,41 @@ function drawBarChart(data, width, height) {
   ctx.respectScreenScale = true;
 
   const n        = data.length;
-  const LABEL_H  = 11;
-  const NUM_H    = 9;
+  const LABEL_H  = 11;                   // 曜日ラベル領域
+  const NUM_H    = 9;                    // 件数ラベル領域
+  const CAP_VAL  = 12;                   // 棒の高さ上限（超えたら飽和表示）
   const chartH   = height - LABEL_H;
-  const maxVal   = Math.max(...data.map(d => d.count), 1);
+  const rawMax   = Math.max(...data.map(d => d.count), 1);
+  const scaleMax = Math.min(rawMax, CAP_VAL);  // スケール上限
   const slotW    = width / n;
   const barW     = Math.floor(slotW * 0.55);
   const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
 
   for (let i = 0; i < n; i++) {
     const { date, count } = data[i];
-    const isToday = i === n - 1;
-    const bx      = Math.floor(i * slotW + (slotW - barW) / 2);
+    const isToday  = i === n - 1;
+    const isCapped = count > CAP_VAL;
+    const capped   = Math.min(count, CAP_VAL);
+    const bx       = Math.floor(i * slotW + (slotW - barW) / 2);
 
     const maxBarH = chartH - NUM_H - 2;
-    const barH    = count > 0 ? Math.max(Math.round((count / maxVal) * maxBarH), 2) : 0;
+    const barH    = count > 0 ? Math.max(Math.round((capped / scaleMax) * maxBarH), 2) : 0;
     const by      = chartH - barH;
 
-    // バー
-    ctx.setFillColor(isToday ? COLOR_ACCENT : new Color("#30d158", 0.30));
+    // バー（上限超えは黄色でハイライト）
+    const barColor = isCapped
+      ? (isToday ? new Color("#ffcc00") : new Color("#ffcc00", 0.45))
+      : (isToday ? COLOR_ACCENT : new Color("#30d158", 0.30));
+    ctx.setFillColor(barColor);
     ctx.fillRect(new Rect(bx, by, barW, barH));
 
-    // カウントラベル（バー上部）
+    // カウントラベル（バー上部・上限超えは "n+" 表記）
     if (count > 0) {
+      const numLabel = isCapped ? `${count}+` : `${count}`;
       ctx.setFont(Font.systemFont(7));
       ctx.setTextColor(isToday ? COLOR_MAIN_VAL : new Color("#8e8e93", 0.75));
       ctx.setTextAlignedCenter();
-      ctx.drawTextInRect(`${count}`, new Rect(i * slotW, Math.max(by - NUM_H, 0), slotW, NUM_H));
+      ctx.drawTextInRect(numLabel, new Rect(i * slotW, Math.max(by - NUM_H, 0), slotW, NUM_H));
     }
 
     // 曜日ラベル（下端）
