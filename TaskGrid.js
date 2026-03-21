@@ -315,19 +315,25 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
     val.textColor = color;
   }
 
-  // 完了セクション
-  addHeaderRow(textCol, "完了");
-  addLabelRow(textCol, "時刻指定:", `${doneTimed}`,  doneTimed  > 0 ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "終日指定:", `${doneAllday}`, doneAllday > 0 ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
-  // 未完了セクション
-  addHeaderRow(textCol, "未完了");
-  addLabelRow(textCol, "時刻指定:", `${timed}`,      timed  > 0 ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "終日指定:", `${allday}`,     allday > 0 ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
-  // 統計（同階層・左端揃え）
-  addFlatRow(textCol, "完了率:", `${rate}%`, rate > 0 ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
-  const sign = diff > 0 ? "+" : "";
-  const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
-  addFlatRow(textCol, "総数前日比:", `${sign}${diff}`, dColor);
+  // 完了セクション（1件以上あるときのみ表示）
+  if (doneTimed > 0 || doneAllday > 0) {
+    addHeaderRow(textCol, "完了");
+    if (doneTimed  > 0) addLabelRow(textCol, "時刻指定:", `${doneTimed}`,  COLOR_MAIN_VAL);
+    if (doneAllday > 0) addLabelRow(textCol, "終日指定:", `${doneAllday}`, COLOR_MAIN_VAL);
+  }
+  // 未完了セクション（1件以上あるときのみ表示）
+  if (timed > 0 || allday > 0) {
+    addHeaderRow(textCol, "未完了");
+    if (timed  > 0) addLabelRow(textCol, "時刻指定:", `${timed}`,  COLOR_MAIN_VAL);
+    if (allday > 0) addLabelRow(textCol, "終日指定:", `${allday}`, COLOR_MAIN_VAL);
+  }
+  // 統計（0・±0は非表示）
+  if (rate > 0) addFlatRow(textCol, "完了率:", `${rate}%`, COLOR_MAIN_VAL);
+  if (diff !== 0) {
+    const sign   = diff > 0 ? "+" : "";
+    const dColor = diff > 0 ? COLOR_ACCENT : COLOR_MINUS;
+    addFlatRow(textCol, "総数前日比:", `${sign}${diff}`, dColor);
+  }
 }
 
 // --------------------------------------------------
