@@ -163,9 +163,9 @@ async function createWidget() {
   lhLabel.font = Font.systemFont(8);
   lhLabel.textColor = COLOR_SUB_TEXT;
   lineHeader.addSpacer(6);
-  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}年（${totalThis}件）`);
+  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}（${totalThis}件）`);
   lineHeader.addSpacer(4);
-  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}年（${totalPrev}件）`);
+  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}（${totalPrev}件）`);
   lineHeader.addSpacer();
 
   lineCol.addSpacer(2);
@@ -213,7 +213,7 @@ async function createWidget() {
   // 下段の仕切り線（7 + 100 + 16 = 123pt → 上段と同じ位置）
   bottomRow.addSpacer(16);
   const bottomDiv = bottomRow.addStack();
-  bottomDiv.size = new Size(1, 46);
+  bottomDiv.size = new Size(1, 56);
   bottomDiv.backgroundColor = COLOR_DIVIDER;
   bottomRow.addSpacer(8);
 
@@ -239,7 +239,7 @@ async function createWidget() {
 function addDonutColumn(container, done, due, diff, centerVal) {
   const wrapper = container.addStack();
   wrapper.layoutHorizontally();
-  wrapper.centerAlignContent();
+  wrapper.bottomAlignContent();     // ラベル群の下端（前日比:）を水平仕切り線に近づける
   wrapper.size = new Size(112, 0);  // donut(54) + gap(6) + textCol(52)
 
   // ドーナツグラフ（左）
