@@ -438,28 +438,55 @@ function drawBarChart(data, width, height) {
   ctx.opaque             = false;
   ctx.respectScreenScale = true;
 
-  const n        = data.length;
-  const LABEL_H  = 8;                    // 曜日ラベル領域
-  const NUM_H    = 9;                    // 件数ラベル領域
-  const CAP_VAL  = 15;                   // 棒の高さ上限（超えたら "15+" 表示）
-  const chartH   = height - LABEL_H;
-  const rawMax   = Math.max(...data.map(d => Math.max(d.countThis, d.countPrev)), 1);
-  const scaleMax = Math.min(rawMax, CAP_VAL);
-  const slotW    = width / n;
-  const halfW    = Math.floor(slotW * 0.42);  // 先週・今週 各バー幅
-  const gap      = Math.max(1, Math.floor(slotW * 0.04));
-  const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+  const n           = data.length;
+  const LABEL_H     = 8;
+  const BAR_YAXIS_W = 12;                // 右端Y軸ラベル領域
+  const CAP_VAL     = 15;
+  const chartH      = height - LABEL_H;
+  const plotW       = width - BAR_YAXIS_W;
+  const rawMax      = Math.max(...data.map(d => Math.max(d.countThis, d.countPrev)), 1);
+  const scaleMax    = Math.min(rawMax, CAP_VAL);
+  const slotW       = plotW / n;
+  const halfW       = Math.floor(slotW * 0.42);
+  const gap         = Math.max(1, Math.floor(slotW * 0.04));
+  const maxBarH     = chartH - 3;        // バー最大高（NUM_H不要になったので広げる）
+  const dayNames    = ["日", "月", "火", "水", "木", "金", "土"];
+
+  // Y軸グリッドとラベル
+  const ticks = calcNiceTicks(scaleMax).filter(v => v > 0);
+  for (const v of ticks) {
+    const ty = chartH - Math.round((v / scaleMax) * maxBarH);
+    const gp = new Path();
+    gp.move(new Point(0, ty));
+    gp.addLine(new Point(plotW, ty));
+    ctx.addPath(gp);
+    ctx.setStrokeColor(new Color("#3a3a3c", 0.5));
+    ctx.setLineWidth(0.5);
+    ctx.strokePath();
+    ctx.setFont(Font.systemFont(6));
+    ctx.setTextColor(new Color("#636366", 0.75));
+    ctx.setTextAlignedRight();
+    ctx.drawTextInRect(`${v}`, new Rect(plotW + 1, Math.max(0, ty - 5), BAR_YAXIS_W - 2, 9));
+  }
+
+  // セパレータ線（バー領域と曜日ラベルの境界）
+  const sep = new Path();
+  sep.move(new Point(0, chartH));
+  sep.addLine(new Point(plotW, chartH));
+  ctx.addPath(sep);
+  ctx.setStrokeColor(new Color("#ffffff", 0.18));
+  ctx.setLineWidth(0.5);
+  ctx.strokePath();
 
   for (let i = 0; i < n; i++) {
     const { dayIndex, countThis, countPrev, isToday } = data[i];
-    const maxBarH  = chartH - NUM_H - 2;
-    const slotLeft = i * slotW;
+    const slotLeft = Math.floor(i * slotW);
 
     // 先週バー（左側・薄い緑）
     if (countPrev > 0) {
       const capped = Math.min(countPrev, CAP_VAL);
       const barH   = Math.max(Math.round((capped / scaleMax) * maxBarH), 2);
-      const bx     = Math.floor(slotLeft + (slotW / 2 - halfW - gap / 2));
+      const bx     = Math.floor(slotLeft + slotW / 2 - halfW - gap / 2);
       ctx.setFillColor(new Color("#30d158", 0.22));
       ctx.fillRect(new Rect(bx, chartH - barH, halfW, barH));
     }
@@ -476,13 +503,6 @@ function drawBarChart(data, width, height) {
         : (isToday ? COLOR_ACCENT : new Color("#30d158", 0.55));
       ctx.setFillColor(barColor);
       ctx.fillRect(new Rect(bx, by, halfW, barH));
-
-      // カウントラベル（今週バー上部）
-      const numLabel = isCapped ? `${CAP_VAL}+` : `${countThis}`;
-      ctx.setFont(Font.systemFont(7));
-      ctx.setTextColor(isToday ? COLOR_MAIN_VAL : new Color("#8e8e93", 0.75));
-      ctx.setTextAlignedCenter();
-      ctx.drawTextInRect(numLabel, new Rect(slotLeft, Math.max(by - NUM_H, 0), slotW, NUM_H));
     }
 
     // 曜日ラベル（下端・固定）
@@ -509,7 +529,7 @@ function drawLineChart(data, width, height, curMonthIdx) {
   const n       = data.length;    // 12
   const LABEL_H = 8;
   const TOP_PAD = 1;
-  const YAXIS_W = 12;             // 右端Y軸ラベル領域（pt）
+  const YAXIS_W = 14;             // 右端Y軸ラベル領域（pt）
   const chartH  = height - LABEL_H - TOP_PAD;
   const plotW   = width - YAXIS_W;  // グラフ実描画幅
   const maxVal  = Math.max(...data.map(d => Math.max(d.doneThis, d.donePrev)), 1);
