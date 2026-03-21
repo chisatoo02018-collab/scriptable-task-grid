@@ -186,7 +186,9 @@ async function createWidget() {
   lineHeader.addSpacer(3);  // 凡例右余白
 
   lineCol.addSpacer(2);
-  const lineImg = lineCol.addImage(drawLineChart(monthlyData, 195, 65, curMonth));
+  const lineContainer = lineCol.addStack();
+  lineContainer.size = new Size(0, 65);  // 幅:カラム追従、高さ:固定
+  const lineImg = lineContainer.addImage(drawLineChart(monthlyData, 195, 65, curMonth));
   lineImg.resizable = true;
 
   widget.addSpacer(1);
@@ -240,9 +242,11 @@ async function createWidget() {
   const barLabel = barCol.addText("日次タスク数");
   barLabel.font = Font.systemFont(7);
   barLabel.textColor = COLOR_MAIN_VAL;
-  barCol.addSpacer(3);
+  barCol.addSpacer(2);
+  const barContainer = barCol.addStack();
+  barContainer.size = new Size(0, 44);  // 幅:カラム追従、高さ:固定
   const chartImage = drawBarChart(weekData, 195, 44);
-  const chartView  = barCol.addImage(chartImage);
+  const chartView  = barContainer.addImage(chartImage);
   chartView.resizable = true;
 
   return widget;
@@ -438,7 +442,7 @@ function drawBarChart(data, width, height) {
   ctx.respectScreenScale = true;
 
   const n           = data.length;
-  const LABEL_H     = 8;
+  const LABEL_H     = 6;                 // 曜日ラベル領域（最小化してバーエリア拡大）
   const BAR_YAXIS_W = 12;                // 右端Y軸ラベル領域
   const CAP_VAL     = 15;
   const chartH      = height - LABEL_H;
@@ -448,7 +452,7 @@ function drawBarChart(data, width, height) {
   const slotW       = plotW / n;
   const halfW       = Math.floor(slotW * 0.42);
   const gap         = Math.max(1, Math.floor(slotW * 0.04));
-  const maxBarH     = chartH - 3;        // バー最大高（NUM_H不要になったので広げる）
+  const maxBarH     = chartH - 2;        // バー最大高（上部2ptのみ確保）
   const dayNames    = ["日", "月", "火", "水", "木", "金", "土"];
 
   // Y軸グリッドとラベル
