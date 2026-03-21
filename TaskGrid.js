@@ -316,7 +316,7 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
   addFlatRow(textCol, "完了率:", `${rate}%`, rate > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
   const sign = diff > 0 ? "+" : "";
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
-  addFlatRow(textCol, "前日比:", `${sign}${diff}`, dColor);
+  addFlatRow(textCol, "総数前日比:", `${sign}${diff}`, dColor);
 }
 
 // --------------------------------------------------
