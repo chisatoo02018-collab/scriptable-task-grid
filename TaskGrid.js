@@ -145,7 +145,7 @@ async function createWidget() {
   donutHeader.addSpacer();
   const dhLabel = donutHeader.addText(todayDate);
   dhLabel.font      = Font.systemFont(7);
-  dhLabel.textColor = COLOR_SUB_TEXT;   // 月次タスク数ラベルと同じグレー
+  dhLabel.textColor = COLOR_MAIN_VAL;
   donutHeader.addSpacer();
 
   donutCol.addSpacer(8);  // 折れ線グラフ65pt表示領域の中央にドーナツを配置
@@ -167,7 +167,7 @@ async function createWidget() {
   lineHeader.centerAlignContent();
   const lhLabel = lineHeader.addText("月次タスク数");
   lhLabel.font = Font.systemFont(7);
-  lhLabel.textColor = COLOR_SUB_TEXT;
+  lhLabel.textColor = COLOR_MAIN_VAL;
   lineHeader.addSpacer();
   addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}（${totalThis}件）`);
   lineHeader.addSpacer(4);
@@ -199,7 +199,7 @@ async function createWidget() {
   gLabelRow.addSpacer();
   const gLabel = gLabelRow.addText("消費時間");
   gLabel.font      = Font.systemFont(7);
-  gLabel.textColor = COLOR_SUB_TEXT;
+  gLabel.textColor = COLOR_MAIN_VAL;
   gLabelRow.addSpacer();
   gaugeBlock.addSpacer(2);
 
@@ -228,7 +228,7 @@ async function createWidget() {
   barCol.layoutVertically();
   const barLabel = barCol.addText("日次タスク数");
   barLabel.font = Font.systemFont(7);
-  barLabel.textColor = COLOR_SUB_TEXT;
+  barLabel.textColor = COLOR_MAIN_VAL;
   barCol.addSpacer(3);
   const chartImage = drawBarChart(dailyCounts, 195, 44);
   const chartView  = barCol.addImage(chartImage);
@@ -267,7 +267,7 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
     row.layoutHorizontally();
     const hdr = row.addText(label);
     hdr.font      = Font.systemFont(6);
-    hdr.textColor = COLOR_SUB_TEXT;
+    hdr.textColor = COLOR_MAIN_VAL;
     row.addSpacer();
   }
 
@@ -296,7 +296,7 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
     row.centerAlignContent();
     const lbl = row.addText(label);
     lbl.font      = Font.systemFont(6);
-    lbl.textColor = COLOR_SUB_TEXT;
+    lbl.textColor = COLOR_MAIN_VAL;
     row.addSpacer();
     const val = row.addText(value);
     val.font      = Font.systemFont(6);
