@@ -489,12 +489,12 @@ function drawLineChart(data, width, height, curMonthIdx) {
   const n       = data.length;    // 12
   const LABEL_H = 8;
   const TOP_PAD = 1;
-  const YAXIS_W = 18;             // 右端Y軸ラベル領域（pt）
+  const YAXIS_W = 12;             // 右端Y軸ラベル領域（pt）
   const chartH  = height - LABEL_H - TOP_PAD;
   const plotW   = width - YAXIS_W;  // グラフ実描画幅
   const maxVal  = Math.max(...data.map(d => Math.max(d.doneThis, d.donePrev)), 1);
 
-  const xPos = (i) => (plotW - 12) * i / (n - 1) + 6;
+  const xPos = (i) => (plotW - 8) * i / (n - 1) + 4;
   const yPos = (v) => TOP_PAD + (1 - v / maxVal) * (chartH - 2);
 
   const COLOR_PREV = new Color("#636366");
@@ -504,8 +504,8 @@ function drawLineChart(data, width, height, curMonthIdx) {
   for (const v of ticks) {
     const y = yPos(v);
     const gp = new Path();
-    gp.move(new Point(6, y));
-    gp.addLine(new Point(plotW - 6, y));
+    gp.move(new Point(4, y));
+    gp.addLine(new Point(plotW - 4, y));
     ctx.addPath(gp);
     ctx.setStrokeColor(new Color("#3a3a3c", v === 0 ? 0.65 : 0.35));
     ctx.setLineWidth(0.5);
