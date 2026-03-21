@@ -291,8 +291,13 @@ function drawDonutChart(done, due, centerVal, size) {
 
   const center = new Point(size / 2, size / 2);
   const outerR = size / 2 - 0.5;
-  const innerR = outerR - 4;      // リング幅 4pt（ゲージと統一）
+  const ringW  = 4;                     // リング幅
+  const innerR = outerR - ringW;
+  const midR   = outerR - ringW / 2;   // キャップ円の中心半径
+  const capR   = ringW / 2;            // キャップ円の半径（= 半リング幅）
   const total  = done + due;
+
+  const startAngle = -(Math.PI / 2);   // 12時の位置から開始（時計回り）
 
   if (total === 0) {
     // タスクなし：グレーの輪のみ
@@ -302,15 +307,13 @@ function drawDonutChart(done, due, centerVal, size) {
     ctx.setFillColor(new Color("#2c2c2e"));
     ctx.fillPath();
   } else {
-    const startAngle = -(Math.PI / 2); // 12時の位置から開始（時計回り）
-
     // 残りタスク（青）: 12時から時計回り
     if (due > 0) {
       const dueEndAngle = startAngle + (due / total) * 2 * Math.PI;
       fillArcSegment(ctx, center, outerR, startAngle, dueEndAngle, COLOR_DUE);
     }
 
-    // 完了タスク（グレー）: 12時から反時計回り
+    // 完了タスク（緑）: 12時から反時計回り
     if (done > 0) {
       const doneStartAngle = startAngle - (done / total) * 2 * Math.PI;
       fillArcSegment(ctx, center, outerR, doneStartAngle, startAngle, COLOR_ACCENT);
@@ -326,6 +329,21 @@ function drawDonutChart(done, due, centerVal, size) {
   ctx.addPath(hole);
   ctx.setFillColor(COLOR_BG);
   ctx.fillPath();
+
+  // 緑弧の両端に丸キャップを描画（ホール抜き後なのでリング帯内に収まる）
+  // midR ± capR がちょうど innerR〜outerR の範囲に収まる
+  if (total > 0 && done > 0) {
+    const doneStartAngle = startAngle - (done / total) * 2 * Math.PI;
+    [startAngle, doneStartAngle].forEach(angle => {
+      const cx = center.x + midR * Math.cos(angle);
+      const cy = center.y + midR * Math.sin(angle);
+      const cp = new Path();
+      cp.addEllipse(new Rect(cx - capR, cy - capR, capR * 2, capR * 2));
+      ctx.addPath(cp);
+      ctx.setFillColor(COLOR_ACCENT);
+      ctx.fillPath();
+    });
+  }
 
   // 中央テキスト：今日の総タスク数
   const label    = `${centerVal}件`;
