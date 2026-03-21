@@ -11,7 +11,7 @@ const COLOR_BG       = new Color("#1c1c1e");    // 背景
 const COLOR_DUE         = new Color("#0a84ff");    // 残りタスク（青）
 const COLOR_YELLOW_GREEN = new Color("#aaed6f");   // 消費済み時間（黄緑）
 const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
-const DONUT_SIZE     = 46;                      // ドーナツグラフのサイズ（pt）
+const DONUT_SIZE     = 54;                      // ドーナツグラフのサイズ（pt）
 const GAUGE_SIZE     = 46;                      // 円形ゲージのサイズ（pt）
 
 // ── 個人設定（寿命ゲージ用） ──
@@ -127,7 +127,7 @@ async function createWidget() {
   // ── 左カラム（ヘッダー＋ドーナツ＋ラベル） ──
   const donutCol = statsRow.addStack();
   donutCol.layoutVertically();
-  donutCol.size = new Size(110, 0);  // 幅固定：lineColへの圧迫を防ぐ
+  donutCol.size = new Size(112, 0);  // 幅固定：lineColへの圧迫を防ぐ
 
   // ヘッダー行：日付+時刻（月次タスク数ラベルと同じ縦位置）
   const mins      = String(now.getMinutes()).padStart(2, '0');
@@ -195,9 +195,9 @@ async function createWidget() {
     { type: "image", value: heartImage });
 
   // 下段の仕切り線（上段の垂直分割線と横位置を合わせる）
-  // 上段: 5+110+6=121pt、下段: 5(初期)+107(gauges)+9=121pt ✓
-  bottomRow.addSpacer(5);  // 上段の初期スペーサーに合わせる
-  bottomRow.addSpacer(9);  // 分割線前のギャップ（上段の6ptに+3で位置合わせ）
+  // 上段: 5+112+6=123pt、下段: 5(初期)+107(gauges)+11=123pt ✓
+  bottomRow.addSpacer(5);   // 上段の初期スペーサーに合わせる
+  bottomRow.addSpacer(11);  // 分割線前のギャップ
   const bottomDiv = bottomRow.addStack();
   bottomDiv.size = new Size(1, 46);
   bottomDiv.backgroundColor = COLOR_DIVIDER;
@@ -226,7 +226,7 @@ function addDonutColumn(container, done, due, diff, centerVal) {
   const wrapper = container.addStack();
   wrapper.layoutHorizontally();
   wrapper.centerAlignContent();
-  wrapper.size = new Size(110, 0);
+  wrapper.size = new Size(112, 0);  // donut(54) + gap(6) + textCol(52)
 
   // ドーナツグラフ（左）
   const imgView = wrapper.addImage(drawDonutChart(done, due, centerVal, DONUT_SIZE));
@@ -240,40 +240,28 @@ function addDonutColumn(container, done, due, diff, centerVal) {
   textCol.layoutVertically();
   textCol.centerAlignContent();
 
-  // 完了件数（緑）
-  const row1 = textCol.addStack();
-  row1.layoutHorizontally();
-  const l1 = row1.addText("完了:");
-  l1.font      = Font.systemFont(7);
-  l1.textColor = COLOR_SUB_TEXT;
-  row1.addSpacer();
-  const v1 = row1.addText(`${done}`);
-  v1.font      = Font.systemFont(7);
-  v1.textColor = done > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT;
+  // 数値を右端24ptのボックスに入れて右揃え（3桁分固定）
+  function addLabelRow(col, label, value, color) {
+    const row = col.addStack();
+    row.layoutHorizontally();
+    row.centerAlignContent();
+    const lbl = row.addText(label);
+    lbl.font      = Font.systemFont(7);
+    lbl.textColor = COLOR_SUB_TEXT;
+    row.addSpacer(3);
+    const numBox = row.addStack();
+    numBox.size = new Size(22, 0);
+    numBox.addSpacer();
+    const val = numBox.addText(value);
+    val.font      = Font.systemFont(7);
+    val.textColor = color;
+  }
 
-  // 未完了件数（青）
-  const row2 = textCol.addStack();
-  row2.layoutHorizontally();
-  const l2 = row2.addText("未完了:");
-  l2.font      = Font.systemFont(7);
-  l2.textColor = COLOR_SUB_TEXT;
-  row2.addSpacer();
-  const v2 = row2.addText(`${due}`);
-  v2.font      = Font.systemFont(7);
-  v2.textColor = due > 0 ? COLOR_DUE : COLOR_SUB_TEXT;
-
-  // 前日比（プラス緑・マイナス赤）
-  const sign   = diff > 0 ? "+" : "";
+  addLabelRow(textCol, "完了:",   `${done}`,          done > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "未完了:", `${due}`,            due  > 0 ? COLOR_DUE   : COLOR_SUB_TEXT);
+  const sign = diff > 0 ? "+" : "";
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
-  const row3 = textCol.addStack();
-  row3.layoutHorizontally();
-  const l3 = row3.addText("前日比:");
-  l3.font      = Font.systemFont(7);
-  l3.textColor = COLOR_SUB_TEXT;
-  row3.addSpacer();
-  const v3 = row3.addText(`${sign}${diff}`);
-  v3.font      = Font.systemFont(7);
-  v3.textColor = dColor;
+  addLabelRow(textCol, "前日比:", `${sign}${diff}`,   dColor);
 }
 
 // --------------------------------------------------
@@ -598,9 +586,8 @@ function addColumnDivider(container) {
 }
 
 function addHorizontalLine(widget) {
-  // ウィジェット幅を超える値を指定してコンテンツ幅いっぱいに伸ばす
   const d = widget.addStack();
-  d.size            = new Size(400, 0.5);
+  d.size            = new Size(320, 0.5);
   d.backgroundColor = COLOR_DIVIDER;
   d.alpha           = 0.6;
 }
