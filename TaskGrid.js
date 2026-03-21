@@ -139,7 +139,7 @@ async function createWidget() {
   donutHeader.centerAlignContent();
   donutHeader.addSpacer();
   const dhLabel = donutHeader.addText(todayDate);
-  dhLabel.font      = Font.systemFont(8);
+  dhLabel.font      = Font.systemFont(6);
   dhLabel.textColor = COLOR_SUB_TEXT;   // 月次タスク数ラベルと同じグレー
   donutHeader.addSpacer();
 
@@ -160,7 +160,7 @@ async function createWidget() {
   lineHeader.layoutHorizontally();
   lineHeader.centerAlignContent();
   const lhLabel = lineHeader.addText("月次タスク数");
-  lhLabel.font = Font.systemFont(8);
+  lhLabel.font = Font.systemFont(6);
   lhLabel.textColor = COLOR_SUB_TEXT;
   lineHeader.addSpacer(6);
   addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}（${totalThis}件）`);
@@ -193,7 +193,7 @@ async function createWidget() {
   gLabelRow.layoutHorizontally();
   gLabelRow.addSpacer();
   const gLabel = gLabelRow.addText("消費時間");
-  gLabel.font      = Font.systemFont(7);
+  gLabel.font      = Font.systemFont(6);
   gLabel.textColor = COLOR_SUB_TEXT;
   gLabelRow.addSpacer();
   gaugeBlock.addSpacer(2);
@@ -202,12 +202,13 @@ async function createWidget() {
   const gaugeInnerRow = gaugeBlock.addStack();
   gaugeInnerRow.layoutHorizontally();
   gaugeInnerRow.centerAlignContent();
+  const COLOR_GAUGE_TRACK = new Color("#0a84ff", 0.35);  // ゲージ用薄い青
   addGaugeColumn(gaugeInnerRow, monthElapsed, GAUGE_SIZE,
-    COLOR_DUE, COLOR_YELLOW_GREEN,
+    COLOR_GAUGE_TRACK, COLOR_YELLOW_GREEN,
     { type: "text", value: `${monthRemainH}h` });
   gaugeInnerRow.addSpacer(8);
   addGaugeColumn(gaugeInnerRow, lifeElapsed, GAUGE_SIZE,
-    COLOR_DUE, COLOR_YELLOW_GREEN,
+    COLOR_GAUGE_TRACK, COLOR_YELLOW_GREEN,
     { type: "image", value: heartImage });
 
   // 下段の仕切り線（7 + 100 + 16 = 123pt → 上段と同じ位置）
@@ -221,7 +222,7 @@ async function createWidget() {
   const barCol = bottomRow.addStack();
   barCol.layoutVertically();
   const barLabel = barCol.addText("日次タスク数");
-  barLabel.font = Font.systemFont(8);
+  barLabel.font = Font.systemFont(6);
   barLabel.textColor = COLOR_SUB_TEXT;
   barCol.addSpacer(3);
   const chartImage = drawBarChart(dailyCounts, 195, 44);
@@ -568,15 +569,19 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
 
   const center = new Point(size / 2, size / 2);
   const outerR = size / 2 - 0.5;
-  const innerR = outerR - 4;            // リング幅 4pt（細め）
+  const ringW  = 4;
+  const innerR = outerR - ringW;
+  const midR   = outerR - ringW / 2;
+  const capR   = ringW / 2;
   const startAngle = -(Math.PI / 2);
 
   // トラック（背景リング）
   fillArcSegment(ctx, center, outerR, startAngle, startAngle + 2 * Math.PI, trackColor);
 
   // 進捗弧（消費済み・反時計回り＝上から左へ）
+  const fillStartAngle = startAngle - progress * 2 * Math.PI;
   if (progress > 0.005) {
-    fillArcSegment(ctx, center, outerR, startAngle - progress * 2 * Math.PI, startAngle, fillColor);
+    fillArcSegment(ctx, center, outerR, fillStartAngle, startAngle, fillColor);
   }
 
   // 中心をくり抜いてリング形状に
@@ -585,6 +590,19 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
   ctx.addPath(hole);
   ctx.setFillColor(COLOR_BG);
   ctx.fillPath();
+
+  // 黄緑弧の両端に丸キャップ（ホール抜き後）
+  if (progress > 0.005 && progress < 0.995) {
+    [startAngle, fillStartAngle].forEach(angle => {
+      const cx = center.x + midR * Math.cos(angle);
+      const cy = center.y + midR * Math.sin(angle);
+      const cp = new Path();
+      cp.addEllipse(new Rect(cx - capR, cy - capR, capR * 2, capR * 2));
+      ctx.addPath(cp);
+      ctx.setFillColor(fillColor);
+      ctx.fillPath();
+    });
+  }
 
   // 中央コンテンツ（画像 or テキスト）
   if (centerContent && centerContent.type === "image" && centerContent.value) {
@@ -634,7 +652,7 @@ function addLegendDot(container, color, label) {
   dot.cornerRadius = 3;
   container.addSpacer(2);
   const t = container.addText(label);
-  t.font = Font.systemFont(8);   // タイトルラベルと同じサイズ
+  t.font = Font.systemFont(6);
   t.textColor = COLOR_SUB_TEXT;
 }
 
