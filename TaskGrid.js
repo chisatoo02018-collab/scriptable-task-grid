@@ -313,7 +313,7 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
   addLabelRow(textCol, "時刻指定:", `${timed}`,      timed  > 0 ? COLOR_DUE : COLOR_SUB_TEXT);
   addLabelRow(textCol, "終日指定:", `${allday}`,     allday > 0 ? COLOR_DUE : COLOR_SUB_TEXT);
   // 統計（同階層・左端揃え）
-  addFlatRow(textCol, "完了率:", `${rate}%`, COLOR_SUB_TEXT);
+  addFlatRow(textCol, "完了率:", `${rate}%`, rate > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
   const sign = diff > 0 ? "+" : "";
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
   addFlatRow(textCol, "前日比:", `${sign}${diff}`, dColor);
@@ -391,9 +391,9 @@ function drawDonutChart(done, due, centerVal, size) {
   const lineH  = fSize + 2;
   const totalH = lines.length * lineH + (lines.length - 1);
   const hasContent = total > 0;
-  ctx.setTextColor(COLOR_SUB_TEXT);
+  ctx.setTextColor(COLOR_MAIN_VAL);
   lines.forEach((line, i) => {
-    ctx.setFont(Font.systemFont(fSize));
+    ctx.setFont(Font.systemFont(6));
     ctx.drawTextInRect(line, new Rect(0, size / 2 - totalH / 2 + i * (lineH + 1), size, lineH));
   });
 
@@ -656,17 +656,16 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
     ctx.setTextAlignedCenter();
     ctx.setTextColor(COLOR_MAIN_VAL);
     if (lines.length === 1) {
-      const fontSize = lines[0].length >= 4 ? 7 : 8;
-      ctx.setFont(Font.boldSystemFont(fontSize));
-      const tH = fontSize + 2;
+      ctx.setFont(Font.systemFont(6));
+      const tH = 8;
       ctx.drawTextInRect(lines[0], new Rect(0, size / 2 - tH / 2, size, tH));
     } else {
-      // 複数行：固定 fontSize 7、行間 1pt
-      const fontSize = 7;
+      // 複数行：固定 6pt、行間 1pt
+      const fontSize = 6;
       const lineH = fontSize + 1;
       const totalH = lines.length * lineH + (lines.length - 1);
       lines.forEach((line, i) => {
-        ctx.setFont(Font.boldSystemFont(fontSize));
+        ctx.setFont(Font.systemFont(fontSize));
         const y = size / 2 - totalH / 2 + i * (lineH + 1);
         ctx.drawTextInRect(line, new Rect(0, y, size, lineH));
       });
