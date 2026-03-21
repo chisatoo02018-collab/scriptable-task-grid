@@ -356,24 +356,9 @@ function drawDonutChart(done, due, centerVal, size) {
       const doneStartAngle = startAngle - (done / total) * 2 * Math.PI;
       fillArcSegment(ctx, center, outerR, doneStartAngle, startAngle, COLOR_ACCENT);
     }
-
-    // 黒ボーダーキャップ（ホール抜き前に描画→内側は後のホール抜きで消える）
-    if (done > 0 && due > 0) {
-      const doneStartAngle = startAngle - (done / total) * 2 * Math.PI;
-      const borderCapR = capR + 0.8;
-      [startAngle, doneStartAngle].forEach(angle => {
-        const cx = center.x + midR * Math.cos(angle);
-        const cy = center.y + midR * Math.sin(angle);
-        const bp = new Path();
-        bp.addEllipse(new Rect(cx - borderCapR, cy - borderCapR, borderCapR * 2, borderCapR * 2));
-        ctx.addPath(bp);
-        ctx.setFillColor(new Color("#000000"));
-        ctx.fillPath();
-      });
-    }
   }
 
-  // 中心をくり抜いてドーナツ形状に（黒ボーダーの内側部分もここで消える）
+  // 中心をくり抜いてドーナツ形状に
   const hole = new Path();
   hole.addEllipse(new Rect(
     size / 2 - innerR, size / 2 - innerR,
@@ -395,6 +380,12 @@ function drawDonutChart(done, due, centerVal, size) {
       ctx.setFillColor(COLOR_ACCENT);
       ctx.fillPath();
     });
+
+    // 緑と青の境目に細い黒線セパレーター（キャップの上に重ねる）
+    if (due > 0) {
+      [startAngle, doneStartAngle].forEach(angle =>
+        drawRingSeparator(ctx, center, innerR, outerR, angle));
+    }
   }
 
   // 中央テキスト（\n で複数行対応）
@@ -411,6 +402,17 @@ function drawDonutChart(done, due, centerVal, size) {
   });
 
   return ctx.getImage();
+}
+
+// リング上の境目に細い黒線セパレーターを描画（キャップの上に重ねる）
+function drawRingSeparator(ctx, center, innerR, outerR, angle) {
+  const p = new Path();
+  p.move(new Point(center.x + innerR * Math.cos(angle), center.y + innerR * Math.sin(angle)));
+  p.addLine(new Point(center.x + outerR * Math.cos(angle), center.y + outerR * Math.sin(angle)));
+  ctx.addPath(p);
+  ctx.setStrokeColor(new Color("#000000"));
+  ctx.setLineWidth(0.75);
+  ctx.strokePath();
 }
 
 // Path.addArc が使えないため、多角形で弧を近似して塗り潰す
@@ -442,7 +444,7 @@ function drawBarChart(data, width, height) {
   ctx.respectScreenScale = true;
 
   const n        = data.length;
-  const LABEL_H  = 11;                   // 曜日ラベル領域
+  const LABEL_H  = 8;                    // 曜日ラベル領域
   const NUM_H    = 9;                    // 件数ラベル領域
   const CAP_VAL  = 15;                   // 棒の高さ上限（超えたら "15+" 表示）
   const chartH   = height - LABEL_H;
@@ -501,7 +503,7 @@ function drawLineChart(data, width, height, curMonthIdx) {
   ctx.respectScreenScale = true;
 
   const n       = data.length;    // 12
-  const LABEL_H = 12;
+  const LABEL_H = 8;
   const TOP_PAD = 4;
   const YAXIS_W = 18;             // 右端Y軸ラベル領域（pt）
   const chartH  = height - LABEL_H - TOP_PAD;
@@ -639,21 +641,7 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
     fillArcSegment(ctx, center, outerR, fillStartAngle, startAngle, fillColor);
   }
 
-  // 黒ボーダーキャップ（ホール抜き前に描画→内側は後のホール抜きで消える）
-  if (progress > 0.005 && progress < 0.995) {
-    const borderCapR = capR + 0.8;
-    [startAngle, fillStartAngle].forEach(angle => {
-      const cx = center.x + midR * Math.cos(angle);
-      const cy = center.y + midR * Math.sin(angle);
-      const bp = new Path();
-      bp.addEllipse(new Rect(cx - borderCapR, cy - borderCapR, borderCapR * 2, borderCapR * 2));
-      ctx.addPath(bp);
-      ctx.setFillColor(new Color("#000000"));
-      ctx.fillPath();
-    });
-  }
-
-  // 中心をくり抜いてリング形状に（黒ボーダーの内側部分もここで消える）
+  // 中心をくり抜いてリング形状に
   const hole = new Path();
   hole.addEllipse(new Rect(size / 2 - innerR, size / 2 - innerR, innerR * 2, innerR * 2));
   ctx.addPath(hole);
@@ -671,6 +659,9 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
       ctx.setFillColor(fillColor);
       ctx.fillPath();
     });
+    // 黄緑と青の境目に細い黒線セパレーター（キャップの上に重ねる）
+    [startAngle, fillStartAngle].forEach(angle =>
+      drawRingSeparator(ctx, center, innerR, outerR, angle));
   }
 
   // 中央コンテンツ（画像 or テキスト）
