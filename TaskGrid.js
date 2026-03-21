@@ -262,7 +262,17 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
   textCol.centerAlignContent();
   textCol.size = new Size(52, 0);  // 112 - donut(54) - gap(6)
 
-  // ラベル固定幅(30pt) + 数値固定幅(22pt) = 52pt
+  // セクションヘッダー行（5pt・全幅・左寄せ）
+  function addHeaderRow(col, label) {
+    const row = col.addStack();
+    row.layoutHorizontally();
+    const hdr = row.addText(label);
+    hdr.font      = Font.systemFont(5);
+    hdr.textColor = COLOR_SUB_TEXT;
+    row.addSpacer();
+  }
+
+  // ラベル固定幅(30pt) + 数値固定幅(22pt) = 52pt（6pt）
   function addLabelRow(col, label, value, color) {
     const row = col.addStack();
     row.layoutHorizontally();
@@ -280,11 +290,16 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
     val.textColor = color;
   }
 
-  addLabelRow(textCol, "時刻指定:", `${timed}`,     timed     > 0 ? COLOR_DUE    : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "終日指定:", `${allday}`,    allday    > 0 ? COLOR_DUE    : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "完了時刻:", `${doneTimed}`, doneTimed > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "完了終日:", `${doneAllday}`,doneAllday> 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "完了率:",   `${rate}%`,     rate      > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
+  // 完了セクション
+  addHeaderRow(textCol, "完了");
+  addLabelRow(textCol, "時刻指定:", `${doneTimed}`,  doneTimed  > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "終日指定:", `${doneAllday}`, doneAllday > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
+  // 未完了セクション
+  addHeaderRow(textCol, "未完了");
+  addLabelRow(textCol, "時刻指定:", `${timed}`,      timed  > 0 ? COLOR_DUE : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "終日指定:", `${allday}`,     allday > 0 ? COLOR_DUE : COLOR_SUB_TEXT);
+  // 統計
+  addLabelRow(textCol, "完了率:",   `${rate}%`,      COLOR_SUB_TEXT);
   const sign = diff > 0 ? "+" : "";
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
   addLabelRow(textCol, "前日比:",   `${sign}${diff}`, dColor);
