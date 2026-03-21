@@ -11,7 +11,7 @@ const COLOR_BG       = new Color("#1c1c1e");    // 背景
 const COLOR_DUE         = new Color("#007AFF");    // 残りタスク・ゲージトラック（iOS青）
 const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
 const DONUT_SIZE     = 54;                      // ドーナツグラフのサイズ（pt）
-const GAUGE_SIZE     = 46;                      // 円形ゲージのサイズ（pt）
+const GAUGE_SIZE     = 52;                      // 円形ゲージのサイズ（pt）
 
 // ── 個人設定（寿命ゲージ用） ──
 const BIRTH_YEAR  = 2003;   // 生年（西暦）
@@ -204,7 +204,7 @@ async function createWidget() {
   bottomRow.addSpacer(2);  // 左マージン
   const gaugeBlock = bottomRow.addStack();
   gaugeBlock.layoutVertically();
-  gaugeBlock.size = new Size(100, 0);  // gauge1(46) + gap(8) + gauge2(46)
+  gaugeBlock.size = new Size(112, 0);  // gauge1(52) + gap(8) + gauge2(52)
 
   // 残時間ラベル（2つのゲージ中央）
   const gLabelRow = gaugeBlock.addStack();
@@ -229,10 +229,10 @@ async function createWidget() {
     COLOR_GAUGE_TRACK, COLOR_ACCENT,
     { type: "image", value: heartImage });
 
-  // 下段の仕切り線（2 + 100 + 18 = 120pt → 上段と同じ位置）
-  bottomRow.addSpacer(18);
+  // 下段の仕切り線（2 + 112 + 6 = 120pt → 上段と同じ位置）
+  bottomRow.addSpacer(6);
   const bottomDiv = bottomRow.addStack();
-  bottomDiv.size = new Size(1, 56);
+  bottomDiv.size = new Size(1, 63);  // label(9) + spacer(2) + gauge(52)
   bottomDiv.backgroundColor = COLOR_DIVIDER;
   bottomRow.addSpacer(8);
 
@@ -244,8 +244,8 @@ async function createWidget() {
   barLabel.textColor = COLOR_MAIN_VAL;
   barCol.addSpacer(2);
   const barContainer = barCol.addStack();
-  barContainer.size = new Size(0, 44);  // 幅:カラム追従、高さ:固定
-  const chartImage = drawBarChart(weekData, 195, 44);
+  barContainer.size = new Size(0, 52);  // 幅:カラム追従、高さ:ゲージ行に合わせる
+  const chartImage = drawBarChart(weekData, 195, 52);
   const chartView  = barContainer.addImage(chartImage);
   chartView.resizable = true;
 
@@ -442,7 +442,7 @@ function drawBarChart(data, width, height) {
   ctx.respectScreenScale = true;
 
   const n           = data.length;
-  const LABEL_H     = 6;                 // 曜日ラベル領域（最小化してバーエリア拡大）
+  const LABEL_H     = 8;                 // 曜日ラベル領域
   const BAR_YAXIS_W = 12;                // 右端Y軸ラベル領域
   const CAP_VAL     = 15;
   const chartH      = height - LABEL_H;
@@ -452,7 +452,7 @@ function drawBarChart(data, width, height) {
   const slotW       = plotW / n;
   const halfW       = Math.floor(slotW * 0.42);
   const gap         = Math.max(1, Math.floor(slotW * 0.04));
-  const maxBarH     = chartH - 2;        // バー最大高（上部2ptのみ確保）
+  const maxBarH     = chartH - 3;        // バー最大高（上部3ptのみ確保）
   const dayNames    = ["日", "月", "火", "水", "木", "金", "土"];
 
   // Y軸グリッドとラベル
