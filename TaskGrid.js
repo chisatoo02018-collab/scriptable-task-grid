@@ -127,19 +127,21 @@ async function createWidget() {
   // ── 左カラム（ヘッダー＋ドーナツ＋ラベル） ──
   const donutCol = statsRow.addStack();
   donutCol.layoutVertically();
+  donutCol.size = new Size(110, 0);  // 幅固定：lineColへの圧迫を防ぐ
 
   // ヘッダー行：日付+時刻（月次タスク数ラベルと同じ縦位置）
   const mins      = String(now.getMinutes()).padStart(2, '0');
-  const todayDate = `${curMonth + 1}/${now.getDate()} ${now.getHours()}:${mins}`;
+  const mm        = String(curMonth + 1).padStart(2, '0');
+  const dd        = String(now.getDate()).padStart(2, '0');
+  const todayDate = `${curYear}/${mm}/${dd} ${now.getHours()}:${mins}`;
   const donutHeader = donutCol.addStack();
   donutHeader.layoutHorizontally();
   donutHeader.centerAlignContent();
   const dhLabel = donutHeader.addText(todayDate);
   dhLabel.font      = Font.systemFont(8);
   dhLabel.textColor = COLOR_MAIN_VAL;
-  donutHeader.addSpacer();
 
-  donutCol.addSpacer(2);
+  donutCol.addSpacer(14);  // ドーナツを中心寄りに押し下げ
   addDonutColumn(donutCol, doneToday, dueToday, diffDay, centerTotal);
 
   statsRow.addSpacer(6);
@@ -192,8 +194,10 @@ async function createWidget() {
     COLOR_DUE, COLOR_YELLOW_GREEN,
     { type: "image", value: heartImage });
 
-  // 下段の仕切り線（上段と同じ位置に揃える）
-  bottomRow.addSpacer(6);
+  // 下段の仕切り線（上段の垂直分割線と横位置を合わせる）
+  // 上段: 5+110+6=121pt、下段: 5(初期)+107(gauges)+9=121pt ✓
+  bottomRow.addSpacer(5);  // 上段の初期スペーサーに合わせる
+  bottomRow.addSpacer(9);  // 分割線前のギャップ（上段の6ptに+3で位置合わせ）
   const bottomDiv = bottomRow.addStack();
   bottomDiv.size = new Size(1, 46);
   bottomDiv.backgroundColor = COLOR_DIVIDER;
@@ -594,12 +598,9 @@ function addColumnDivider(container) {
 }
 
 function addHorizontalLine(widget) {
-  const s = widget.addStack();
-  s.layoutHorizontally();
-  s.addSpacer();
-  const d = s.addStack();
-  d.size            = new Size(280, 0.5);
+  // ウィジェット幅を超える値を指定してコンテンツ幅いっぱいに伸ばす
+  const d = widget.addStack();
+  d.size            = new Size(400, 0.5);
   d.backgroundColor = COLOR_DIVIDER;
-  d.alpha           = 0.5;
-  s.addSpacer();
+  d.alpha           = 0.6;
 }
