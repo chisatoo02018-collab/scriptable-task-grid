@@ -3,13 +3,12 @@
 // ==========================================
 const TARGET_LIST_NAME = "";
 
-const COLOR_ACCENT   = new Color("#30d158");   // 緑（完了）
+const COLOR_ACCENT   = new Color("#aaed6f");   // 黄緑（完了・消費時間など統一色）
 const COLOR_MINUS    = new Color("#ff453a");    // 赤（マイナス）
 const COLOR_MAIN_VAL = new Color("#ffffff");    // メイン数字
 const COLOR_SUB_TEXT = new Color("#8e8e93");    // サブテキスト
 const COLOR_BG       = new Color("#1c1c1e");    // 背景
 const COLOR_DUE         = new Color("#0A84FF");    // 残りタスク・ゲージトラック（iOS青）
-const COLOR_YELLOW_GREEN = new Color("#aaed6f");   // 消費済み時間（黄緑）
 const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
 const DONUT_SIZE     = 54;                      // ドーナツグラフのサイズ（pt）
 const GAUGE_SIZE     = 46;                      // 円形ゲージのサイズ（pt）
@@ -210,11 +209,11 @@ async function createWidget() {
   gaugeInnerRow.centerAlignContent();
   const COLOR_GAUGE_TRACK = new Color("#0A84FF");  // ゲージトラック（iOS青）
   addGaugeColumn(gaugeInnerRow, monthElapsed, GAUGE_SIZE,
-    COLOR_GAUGE_TRACK, COLOR_YELLOW_GREEN,
+    COLOR_GAUGE_TRACK, COLOR_ACCENT,
     { type: "text", value: `残\n${monthRemainH}h` });
   gaugeInnerRow.addSpacer(8);
   addGaugeColumn(gaugeInnerRow, lifeElapsed, GAUGE_SIZE,
-    COLOR_GAUGE_TRACK, COLOR_YELLOW_GREEN,
+    COLOR_GAUGE_TRACK, COLOR_ACCENT,
     { type: "image", value: heartImage });
 
   // 下段の仕切り線（7 + 100 + 16 = 123pt → 上段と同じ位置）
@@ -453,7 +452,7 @@ function drawBarChart(data, width, height) {
     // バー（上限超えは黄色でハイライト）
     const barColor = isCapped
       ? (isToday ? new Color("#ffcc00") : new Color("#ffcc00", 0.45))
-      : (isToday ? COLOR_ACCENT : new Color("#30d158", 0.30));
+      : (isToday ? COLOR_ACCENT : new Color("#aaed6f", 0.30));
     ctx.setFillColor(barColor);
     ctx.fillRect(new Rect(bx, by, barW, barH));
 
@@ -553,7 +552,7 @@ function drawLineChart(data, width, height, curMonthIdx) {
     const below = data[i].doneThis < data[i].donePrev;
     const dotColor = below
       ? (i === curMonthIdx ? new Color("#ff453a") : new Color("#ff453a", 0.7))
-      : (i === curMonthIdx ? COLOR_ACCENT : new Color("#30d158", 0.7));
+      : (i === curMonthIdx ? COLOR_ACCENT : new Color("#aaed6f", 0.7));
     const p = new Path();
     p.addEllipse(new Rect(x - r, y - r, r * 2, r * 2));
     ctx.addPath(p);
