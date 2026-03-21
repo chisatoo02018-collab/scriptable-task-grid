@@ -3,18 +3,21 @@
 // ==========================================
 const TARGET_LIST_NAME = "";
 
-const COLOR_ACCENT   = new Color("#30d158");   // 緑（完了）
+const COLOR_ACCENT   = new Color("#30d158");   // 黄緑（完了・消費時間など統一色）
 const COLOR_MINUS    = new Color("#ff453a");    // 赤（マイナス）
 const COLOR_MAIN_VAL = new Color("#ffffff");    // メイン数字
 const COLOR_SUB_TEXT = new Color("#8e8e93");    // サブテキスト
 const COLOR_BG       = new Color("#1c1c1e");    // 背景
-const COLOR_DUE         = new Color("#0A84FF");    // 残りタスク・ゲージトラック（iOS青）
-const COLOR_YELLOW_GREEN = new Color("#aaed6f");   // 消費済み時間（黄緑）
+const COLOR_DUE         = new Color("#007AFF");    // 残りタスク・ゲージトラック（iOS青）
 const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
 const DONUT_SIZE     = 54;                      // ドーナツグラフのサイズ（pt）
-const GAUGE_SIZE     = 46;                      // 円形ゲージのサイズ（pt）
+const GAUGE_SIZE     = 52;                      // 円形ゲージのサイズ（pt）
 
 // ── 個人設定（寿命ゲージ用） ──
+const BIRTH_YEAR  = 2003;   // 生年（西暦）
+const BIRTH_MONTH = 2;      // 誕生月（1〜12）
+const BIRTH_DAY   = 18;     // 誕生日
+const LIFE_YEARS  = 80;     // 想定寿命（年）
 const HEART_IMAGE_BASE64 = "";   // ← base64エンコード画像を設定（空欄=LifeMerterから自動取得）
 
 // ==========================================
@@ -37,7 +40,6 @@ function isSameDay(d, t) {
       && d.getFullYear() === t.getFullYear();
 }
 function isSameMonth(d, y, m) { return d.getMonth() === m && d.getFullYear() === y; }
-function isSameYear(d, y)     { return d.getFullYear() === y; }
 
 // --------------------------------------------------
 // メインウィジェット
@@ -45,7 +47,7 @@ function isSameYear(d, y)     { return d.getFullYear() === y; }
 async function createWidget() {
   const widget = new ListWidget();
   widget.backgroundColor = COLOR_BG;
-  widget.setPadding(8, 16, 8, 16);
+  widget.setPadding(3, 5, 2, 4);
 
   // --- データ取得 ---
   let calendars;
@@ -102,33 +104,40 @@ async function createWidget() {
   const daysInMonth  = new Date(curYear, curMonth + 1, 0).getDate();
   const monthStart   = new Date(curYear, curMonth, 1);
   const monthElapsed = (now - monthStart) / (daysInMonth * 24 * 3600000);  // 消費済み割合
-  const monthRemainH = Math.ceil((daysInMonth * 24) * (1 - monthElapsed));
+  const monthRemainH = Math.max(0, Math.ceil((daysInMonth * 24) * (1 - monthElapsed)));
 
-  const LIFE_START   = new Date(2003, 1, 18);   // 2003/02/18
-  const LIFE_END     = new Date(2083, 1, 18);   // 2083/02/18
-  const lifeElapsed  = (now - LIFE_START) / (LIFE_END - LIFE_START);  // 消費済み割合
+  const LIFE_START   = new Date(BIRTH_YEAR, BIRTH_MONTH - 1, BIRTH_DAY);
+  const LIFE_END     = new Date(BIRTH_YEAR + LIFE_YEARS, BIRTH_MONTH - 1, BIRTH_DAY);
+  const lifeElapsed  = Math.min(1, (now - LIFE_START) / (LIFE_END - LIFE_START));  // 消費済み割合
 
   const heartImage   = await loadHeartImage();
 
-  // 過去7日の完了数（バーチャート用）
-  const DAYS = 7;
-  const dailyCounts = [];
-  for (let i = DAYS - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    dailyCounts.push({ date: d, count: cntDone(cd => isSameDay(cd, d)) });
+  // 今週（日〜土）の完了数 ＋ 先週同曜日との比較（バーチャート用）
+  const thisSunday = new Date(now);
+  thisSunday.setDate(now.getDate() - now.getDay());
+  thisSunday.setHours(0, 0, 0, 0);
+  const weekData = [];
+  for (let i = 0; i < 7; i++) {
+    const d     = new Date(thisSunday); d.setDate(thisSunday.getDate() + i);
+    const dPrev = new Date(d);          dPrev.setDate(d.getDate() - 7);
+    weekData.push({
+      dayIndex:  i,
+      countThis: cntDone(cd => isSameDay(cd, d)),
+      countPrev: cntDone(cd => isSameDay(cd, dPrev)),
+      isToday:   isSameDay(d, now),
+    });
   }
 
   // ==================== 描画 ====================
 
-  widget.addSpacer(2);
+  widget.addSpacer(1);
 
   // ── 統計行：今日ドーナツ | 折れ線グラフ（6ヶ月） ──
   const statsRow = widget.addStack();
   statsRow.layoutHorizontally();
   statsRow.topAlignContent();  // 上揃え：ヘッダー行の縦位置を月次タスク数ラベルに合わせる
 
-  statsRow.addSpacer(5);  // 上段を少し右へオフセット
+  statsRow.addSpacer(2);  // 上段を少し右へオフセット
 
   // ── 左カラム（ヘッダー＋ドーナツ＋ラベル） ──
   const donutCol = statsRow.addStack();
@@ -145,8 +154,8 @@ async function createWidget() {
   donutHeader.centerAlignContent();
   donutHeader.addSpacer();
   const dhLabel = donutHeader.addText(todayDate);
-  dhLabel.font      = Font.systemFont(7);
-  dhLabel.textColor = COLOR_SUB_TEXT;   // 月次タスク数ラベルと同じグレー
+  dhLabel.font      = Font.systemFont(8);
+  dhLabel.textColor = COLOR_MAIN_VAL;
   donutHeader.addSpacer();
 
   donutCol.addSpacer(8);  // 折れ線グラフ65pt表示領域の中央にドーナツを配置
@@ -167,21 +176,22 @@ async function createWidget() {
   lineHeader.layoutHorizontally();
   lineHeader.centerAlignContent();
   const lhLabel = lineHeader.addText("月次タスク数");
-  lhLabel.font = Font.systemFont(7);
-  lhLabel.textColor = COLOR_SUB_TEXT;
-  lineHeader.addSpacer();
-  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}（${totalThis}件）`);
+  lhLabel.font = Font.systemFont(8);
+  lhLabel.textColor = COLOR_MAIN_VAL;
+  lineHeader.addSpacer(6);
+  addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}（${totalThis}件）`, COLOR_MAIN_VAL);
   lineHeader.addSpacer(4);
-  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}（${totalPrev}件）`);
+  addLegendDot(lineHeader, new Color("#636366"), `${prevYear}（${totalPrev}件）`, COLOR_SUB_TEXT);
 
   lineCol.addSpacer(2);
-  const lineImg = lineCol.addImage(drawLineChart(monthlyData, 195, 65, curMonth));
-  lineImg.resizable = false;
-  lineImg.imageSize = new Size(195, 65);
+  const lineContainer = lineCol.addStack();
+  lineContainer.size = new Size(0, 65);  // 幅:カラム追従、高さ:固定
+  const lineImg = lineContainer.addImage(drawLineChart(monthlyData, 195, 65, curMonth));
+  lineImg.resizable = true;
 
-  widget.addSpacer(2);
+  widget.addSpacer(1);
   addHorizontalLine(widget);
-  widget.addSpacer(3);  // 仕切り線から下段を少し離す
+  widget.addSpacer(2);  // 仕切り線から下段を少し離す
 
   // ── 下段：円形ゲージ（左・ドーナツ下）| 日次バーチャート（右・折れ線下） ──
   const bottomRow = widget.addStack();
@@ -189,18 +199,18 @@ async function createWidget() {
   bottomRow.topAlignContent();  // ラベルを上の仕切り線寄りに配置
 
   // 円形ゲージ（左）＋「残時間」ラベル
-  bottomRow.addSpacer(7);  // 左マージン
+  bottomRow.addSpacer(2);  // 左マージン
   const gaugeBlock = bottomRow.addStack();
   gaugeBlock.layoutVertically();
-  gaugeBlock.size = new Size(100, 0);  // gauge1(46) + gap(8) + gauge2(46)
+  gaugeBlock.size = new Size(112, 0);  // gauge1(52) + gap(8) + gauge2(52)
 
   // 残時間ラベル（2つのゲージ中央）
   const gLabelRow = gaugeBlock.addStack();
   gLabelRow.layoutHorizontally();
   gLabelRow.addSpacer();
   const gLabel = gLabelRow.addText("消費時間");
-  gLabel.font      = Font.systemFont(7);
-  gLabel.textColor = COLOR_SUB_TEXT;
+  gLabel.font      = Font.systemFont(8);
+  gLabel.textColor = COLOR_MAIN_VAL;
   gLabelRow.addSpacer();
   gaugeBlock.addSpacer(2);
 
@@ -208,19 +218,19 @@ async function createWidget() {
   const gaugeInnerRow = gaugeBlock.addStack();
   gaugeInnerRow.layoutHorizontally();
   gaugeInnerRow.centerAlignContent();
-  const COLOR_GAUGE_TRACK = new Color("#0A84FF");  // ゲージトラック（iOS青）
+  const COLOR_GAUGE_TRACK = COLOR_DUE;  // ゲージトラック（タスクドーナツと同じ青）
   addGaugeColumn(gaugeInnerRow, monthElapsed, GAUGE_SIZE,
-    COLOR_GAUGE_TRACK, COLOR_YELLOW_GREEN,
+    COLOR_GAUGE_TRACK, COLOR_ACCENT,
     { type: "text", value: `残\n${monthRemainH}h` });
   gaugeInnerRow.addSpacer(8);
   addGaugeColumn(gaugeInnerRow, lifeElapsed, GAUGE_SIZE,
-    COLOR_GAUGE_TRACK, COLOR_YELLOW_GREEN,
+    COLOR_GAUGE_TRACK, COLOR_ACCENT,
     { type: "image", value: heartImage });
 
-  // 下段の仕切り線（7 + 100 + 16 = 123pt → 上段と同じ位置）
-  bottomRow.addSpacer(16);
+  // 下段の仕切り線（2 + 112 + 6 = 120pt → 上段と同じ位置）
+  bottomRow.addSpacer(6);
   const bottomDiv = bottomRow.addStack();
-  bottomDiv.size = new Size(1, 56);
+  bottomDiv.size = new Size(1, 65);  // label(8) + spacer(2) + gauge(55)
   bottomDiv.backgroundColor = COLOR_DIVIDER;
   bottomRow.addSpacer(8);
 
@@ -228,13 +238,14 @@ async function createWidget() {
   const barCol = bottomRow.addStack();
   barCol.layoutVertically();
   const barLabel = barCol.addText("日次タスク数");
-  barLabel.font = Font.systemFont(7);
-  barLabel.textColor = COLOR_SUB_TEXT;
-  barCol.addSpacer(3);
-  const chartImage = drawBarChart(dailyCounts, 195, 44);
-  const chartView  = barCol.addImage(chartImage);
-  chartView.resizable = false;
-  chartView.imageSize = new Size(195, 44);
+  barLabel.font = Font.systemFont(8);
+  barLabel.textColor = COLOR_MAIN_VAL;
+  barCol.addSpacer(2);
+  const barContainer = barCol.addStack();
+  barContainer.size = new Size(0, 55);  // 幅:カラム追従、高さ:ゲージ行に合わせる
+  const chartImage = drawBarChart(weekData, 195, 55);
+  const chartView  = barContainer.addImage(chartImage);
+  chartView.resizable = true;
 
   return widget;
 }
@@ -268,7 +279,7 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
     row.layoutHorizontally();
     const hdr = row.addText(label);
     hdr.font      = Font.systemFont(6);
-    hdr.textColor = COLOR_SUB_TEXT;
+    hdr.textColor = COLOR_MAIN_VAL;
     row.addSpacer();
   }
 
@@ -281,7 +292,7 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
     lblBox.size = new Size(30, 0);
     const lbl = lblBox.addText(label);
     lbl.font      = Font.systemFont(6);
-    lbl.textColor = COLOR_SUB_TEXT;
+    lbl.textColor = color === COLOR_SUB_TEXT ? COLOR_SUB_TEXT : COLOR_MAIN_VAL;
     const numBox = row.addStack();
     numBox.size = new Size(22, 0);
     numBox.addSpacer();
@@ -297,26 +308,32 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
     row.centerAlignContent();
     const lbl = row.addText(label);
     lbl.font      = Font.systemFont(6);
-    lbl.textColor = COLOR_SUB_TEXT;
+    lbl.textColor = COLOR_MAIN_VAL;
     row.addSpacer();
     const val = row.addText(value);
     val.font      = Font.systemFont(6);
     val.textColor = color;
   }
 
-  // 完了セクション
-  addHeaderRow(textCol, "完了");
-  addLabelRow(textCol, "時刻指定:", `${doneTimed}`,  doneTimed  > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "終日指定:", `${doneAllday}`, doneAllday > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
-  // 未完了セクション
-  addHeaderRow(textCol, "未完了");
-  addLabelRow(textCol, "時刻指定:", `${timed}`,      timed  > 0 ? COLOR_DUE : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "終日指定:", `${allday}`,     allday > 0 ? COLOR_DUE : COLOR_SUB_TEXT);
-  // 統計（同階層・左端揃え）
-  addFlatRow(textCol, "完了率:", `${rate}%`, rate > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
-  const sign = diff > 0 ? "+" : "";
-  const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
-  addFlatRow(textCol, "総数前日比:", `${sign}${diff}`, dColor);
+  // 完了セクション（1件以上あるときのみ表示）
+  if (doneTimed > 0 || doneAllday > 0) {
+    addHeaderRow(textCol, "完了");
+    if (doneTimed  > 0) addLabelRow(textCol, "時刻指定:", `${doneTimed}`,  COLOR_MAIN_VAL);
+    if (doneAllday > 0) addLabelRow(textCol, "終日指定:", `${doneAllday}`, COLOR_MAIN_VAL);
+  }
+  // 未完了セクション（1件以上あるときのみ表示）
+  if (timed > 0 || allday > 0) {
+    addHeaderRow(textCol, "未完了");
+    if (timed  > 0) addLabelRow(textCol, "時刻指定:", `${timed}`,  COLOR_MAIN_VAL);
+    if (allday > 0) addLabelRow(textCol, "終日指定:", `${allday}`, COLOR_MAIN_VAL);
+  }
+  // 統計（0・±0は非表示）
+  if (rate > 0) addFlatRow(textCol, "完了率:", `${rate}%`, COLOR_MAIN_VAL);
+  if (diff !== 0) {
+    const sign   = diff > 0 ? "+" : "";
+    const dColor = diff > 0 ? COLOR_ACCENT : COLOR_MINUS;
+    addFlatRow(textCol, "総数前日比:", `${sign}${diff}`, dColor);
+  }
 }
 
 // --------------------------------------------------
@@ -369,8 +386,7 @@ function drawDonutChart(done, due, centerVal, size) {
   ctx.setFillColor(COLOR_BG);
   ctx.fillPath();
 
-  // 緑弧の両端に丸キャップを描画（ホール抜き後なのでリング帯内に収まる）
-  // midR ± capR がちょうど innerR〜outerR の範囲に収まる
+  // 緑弧の両端に丸キャップを描画（ホール抜き後）
   if (total > 0 && done > 0) {
     const doneStartAngle = startAngle - (done / total) * 2 * Math.PI;
     [startAngle, doneStartAngle].forEach(angle => {
@@ -382,18 +398,18 @@ function drawDonutChart(done, due, centerVal, size) {
       ctx.setFillColor(COLOR_ACCENT);
       ctx.fillPath();
     });
+
   }
 
   // 中央テキスト（\n で複数行対応）
   ctx.setTextAlignedCenter();
   const lines = String(centerVal).split('\n');
-  const fSize  = 7;
+  const fSize  = 9;
   const lineH  = fSize + 2;
   const totalH = lines.length * lineH + (lines.length - 1);
-  const hasContent = total > 0;
   ctx.setTextColor(COLOR_MAIN_VAL);
   lines.forEach((line, i) => {
-    ctx.setFont(Font.systemFont(6));
+    ctx.setFont(Font.boldSystemFont(fSize));
     ctx.drawTextInRect(line, new Rect(0, size / 2 - totalH / 2 + i * (lineH + 1), size, lineH));
   });
 
@@ -428,49 +444,78 @@ function drawBarChart(data, width, height) {
   ctx.opaque             = false;
   ctx.respectScreenScale = true;
 
-  const n        = data.length;
-  const LABEL_H  = 11;                   // 曜日ラベル領域
-  const NUM_H    = 9;                    // 件数ラベル領域
-  const CAP_VAL  = 15;                   // 棒の高さ上限（超えたら "15+" 表示）
-  const chartH   = height - LABEL_H;
-  const rawMax   = Math.max(...data.map(d => d.count), 1);
-  const scaleMax = Math.min(rawMax, CAP_VAL);  // スケール上限
-  const slotW    = width / n;
-  const barW     = Math.floor(slotW * 0.55);
-  const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+  const n           = data.length;
+  const LABEL_H     = 8;                 // 曜日ラベル領域
+  const BAR_YAXIS_W = 12;                // 右端Y軸ラベル領域
+  const CAP_VAL     = 15;
+  const chartH      = height - LABEL_H;
+  const plotW       = width - BAR_YAXIS_W;
+  const rawMax      = Math.max(...data.map(d => Math.max(d.countThis, d.countPrev)), 1);
+  const scaleMax    = Math.min(rawMax, CAP_VAL);
+  const slotW       = plotW / n;
+  const halfW       = Math.floor(slotW * 0.42);
+  const gap         = Math.max(1, Math.floor(slotW * 0.04));
+  const maxBarH     = chartH - 3;        // バー最大高（上部3ptのみ確保）
+  const dayNames    = ["日", "月", "火", "水", "木", "金", "土"];
+
+  // Y軸グリッドとラベル
+  const ticks = calcNiceTicks(scaleMax).filter(v => v > 0);
+  for (const v of ticks) {
+    const ty = chartH - Math.round((v / scaleMax) * maxBarH);
+    const gp = new Path();
+    gp.move(new Point(0, ty));
+    gp.addLine(new Point(plotW, ty));
+    ctx.addPath(gp);
+    ctx.setStrokeColor(new Color("#3a3a3c", 0.25));
+    ctx.setLineWidth(0.5);
+    ctx.strokePath();
+    ctx.setFont(Font.systemFont(6));
+    ctx.setTextColor(new Color("#636366", 0.75));
+    ctx.setTextAlignedRight();
+    ctx.drawTextInRect(`${v}`, new Rect(plotW + 1, Math.max(0, ty - 5), BAR_YAXIS_W - 2, 9));
+  }
+
+  // セパレータ線（バー領域と曜日ラベルの境界）
+  const sep = new Path();
+  sep.move(new Point(0, chartH));
+  sep.addLine(new Point(plotW, chartH));
+  ctx.addPath(sep);
+  ctx.setStrokeColor(new Color("#ffffff", 0.18));
+  ctx.setLineWidth(0.5);
+  ctx.strokePath();
 
   for (let i = 0; i < n; i++) {
-    const { date, count } = data[i];
-    const isToday  = i === n - 1;
-    const isCapped = count > CAP_VAL;
-    const capped   = Math.min(count, CAP_VAL);
-    const bx       = Math.floor(i * slotW + (slotW - barW) / 2);
+    const { dayIndex, countThis, countPrev, isToday } = data[i];
+    const slotLeft = Math.floor(i * slotW);
 
-    const maxBarH = chartH - NUM_H - 2;
-    const barH    = count > 0 ? Math.max(Math.round((capped / scaleMax) * maxBarH), 2) : 0;
-    const by      = chartH - barH;
-
-    // バー（上限超えは黄色でハイライト）
-    const barColor = isCapped
-      ? (isToday ? new Color("#ffcc00") : new Color("#ffcc00", 0.45))
-      : (isToday ? COLOR_ACCENT : new Color("#30d158", 0.30));
-    ctx.setFillColor(barColor);
-    ctx.fillRect(new Rect(bx, by, barW, barH));
-
-    // カウントラベル（バー上部・上限超えは "n+" 表記）
-    if (count > 0) {
-      const numLabel = isCapped ? `${CAP_VAL}+` : `${count}`;
-      ctx.setFont(Font.systemFont(7));
-      ctx.setTextColor(isToday ? COLOR_MAIN_VAL : new Color("#8e8e93", 0.75));
-      ctx.setTextAlignedCenter();
-      ctx.drawTextInRect(numLabel, new Rect(i * slotW, Math.max(by - NUM_H, 0), slotW, NUM_H));
+    // 先週バー（左側・グレー）
+    if (countPrev > 0) {
+      const capped = Math.min(countPrev, CAP_VAL);
+      const barH   = Math.max(Math.round((capped / scaleMax) * maxBarH), 2);
+      const bx     = Math.floor(slotLeft + slotW / 2 - halfW - gap / 2);
+      ctx.setFillColor(new Color("#636366", 0.55));
+      ctx.fillRect(new Rect(bx, chartH - barH, halfW, barH));
     }
 
-    // 曜日ラベル（下端）
+    // 今週バー（右側）
+    if (countThis > 0) {
+      const capped   = Math.min(countThis, CAP_VAL);
+      const barH     = Math.max(Math.round((capped / scaleMax) * maxBarH), 2);
+      const by       = chartH - barH;
+      const bx       = Math.floor(slotLeft + slotW / 2 + gap / 2);
+      const isCapped = countThis > CAP_VAL;
+      const barColor = isCapped
+        ? (isToday ? new Color("#ffcc00") : new Color("#ffcc00", 0.35))
+        : (isToday ? COLOR_ACCENT : new Color("#30d158", 0.38));
+      ctx.setFillColor(barColor);
+      ctx.fillRect(new Rect(bx, by, halfW, barH));
+    }
+
+    // 曜日ラベル（下端・固定）
     ctx.setFont(Font.systemFont(6));
     ctx.setTextColor(isToday ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
     ctx.setTextAlignedCenter();
-    ctx.drawTextInRect(dayNames[date.getDay()], new Rect(i * slotW, chartH + 1, slotW, LABEL_H));
+    ctx.drawTextInRect(dayNames[dayIndex], new Rect(slotLeft, height - LABEL_H, slotW, LABEL_H));
   }
 
   return ctx.getImage();
@@ -488,14 +533,14 @@ function drawLineChart(data, width, height, curMonthIdx) {
   ctx.respectScreenScale = true;
 
   const n       = data.length;    // 12
-  const LABEL_H = 12;
-  const TOP_PAD = 4;
-  const YAXIS_W = 18;             // 右端Y軸ラベル領域（pt）
+  const LABEL_H = 8;
+  const TOP_PAD = 1;
+  const YAXIS_W = 14;             // 右端Y軸ラベル領域（pt）
   const chartH  = height - LABEL_H - TOP_PAD;
   const plotW   = width - YAXIS_W;  // グラフ実描画幅
   const maxVal  = Math.max(...data.map(d => Math.max(d.doneThis, d.donePrev)), 1);
 
-  const xPos = (i) => (plotW - 12) * i / (n - 1) + 6;
+  const xPos = (i) => (plotW - 8) * i / (n - 1) + 4;
   const yPos = (v) => TOP_PAD + (1 - v / maxVal) * (chartH - 2);
 
   const COLOR_PREV = new Color("#636366");
@@ -505,17 +550,17 @@ function drawLineChart(data, width, height, curMonthIdx) {
   for (const v of ticks) {
     const y = yPos(v);
     const gp = new Path();
-    gp.move(new Point(6, y));
-    gp.addLine(new Point(plotW - 6, y));
+    gp.move(new Point(4, y));
+    gp.addLine(new Point(plotW - 4, y));
     ctx.addPath(gp);
-    ctx.setStrokeColor(new Color("#3a3a3c", v === 0 ? 0.65 : 0.35));
+    ctx.setStrokeColor(new Color("#3a3a3c", v === 0 ? 0.50 : 0.20));
     ctx.setLineWidth(0.5);
     ctx.strokePath();
     // Y軸ラベル（右端にさりげなく）
     ctx.setFont(Font.systemFont(6));
     ctx.setTextColor(new Color("#636366", 0.75));
     ctx.setTextAlignedRight();
-    ctx.drawTextInRect(`${v}`, new Rect(plotW, y - 5, YAXIS_W - 1, 9));
+    ctx.drawTextInRect(`${v}`, new Rect(plotW, Math.max(0, y - 5), YAXIS_W - 1, 9));
   }
 
   // 前年ライン（グレー、全12ヶ月）
@@ -656,16 +701,16 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
     ctx.setTextAlignedCenter();
     ctx.setTextColor(COLOR_MAIN_VAL);
     if (lines.length === 1) {
-      ctx.setFont(Font.systemFont(6));
-      const tH = 8;
+      ctx.setFont(Font.boldSystemFont(9));
+      const tH = 11;
       ctx.drawTextInRect(lines[0], new Rect(0, size / 2 - tH / 2, size, tH));
     } else {
-      // 複数行：固定 6pt、行間 1pt
-      const fontSize = 6;
+      // 複数行：固定 9pt、行間 1pt
+      const fontSize = 9;
       const lineH = fontSize + 1;
       const totalH = lines.length * lineH + (lines.length - 1);
       lines.forEach((line, i) => {
-        ctx.setFont(Font.systemFont(fontSize));
+        ctx.setFont(Font.boldSystemFont(fontSize));
         const y = size / 2 - totalH / 2 + i * (lineH + 1);
         ctx.drawTextInRect(line, new Rect(0, y, size, lineH));
       });
@@ -687,7 +732,7 @@ async function loadHeartImage() {
   return SFSymbol.named("heart.fill").image;
 }
 
-function addLegendDot(container, color, label) {
+function addLegendDot(container, color, label, textColor = COLOR_SUB_TEXT) {
   const dot = container.addStack();
   dot.size = new Size(6, 6);
   dot.backgroundColor = color;
@@ -695,19 +740,12 @@ function addLegendDot(container, color, label) {
   container.addSpacer(2);
   const t = container.addText(label);
   t.font = Font.systemFont(6);
-  t.textColor = COLOR_SUB_TEXT;
+  t.textColor = textColor;
 }
 
 // --------------------------------------------------
 // 区切り線
 // --------------------------------------------------
-function addColumnDivider(container) {
-  container.addSpacer();
-  const d = container.addStack();
-  d.size            = new Size(1, 58);
-  d.backgroundColor = COLOR_DIVIDER;
-  container.addSpacer();
-}
 
 function addHorizontalLine(widget) {
   const d = widget.addStack();
