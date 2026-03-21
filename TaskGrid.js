@@ -179,11 +179,10 @@ async function createWidget() {
   const lhLabel = lineHeader.addText("月次タスク数");
   lhLabel.font = Font.systemFont(7);
   lhLabel.textColor = COLOR_MAIN_VAL;
-  lineHeader.addSpacer();
+  lineHeader.addSpacer(6);
   addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}（${totalThis}件）`, COLOR_MAIN_VAL);
   lineHeader.addSpacer(4);
   addLegendDot(lineHeader, new Color("#636366"), `${prevYear}（${totalPrev}件）`, COLOR_SUB_TEXT);
-  lineHeader.addSpacer(3);  // 凡例右余白
 
   lineCol.addSpacer(2);
   const lineContainer = lineCol.addStack();
@@ -400,13 +399,12 @@ function drawDonutChart(done, due, centerVal, size) {
   // 中央テキスト（\n で複数行対応）
   ctx.setTextAlignedCenter();
   const lines = String(centerVal).split('\n');
-  const fSize  = 7;
+  const fSize  = 10;
   const lineH  = fSize + 2;
   const totalH = lines.length * lineH + (lines.length - 1);
-  const hasContent = total > 0;
   ctx.setTextColor(COLOR_MAIN_VAL);
   lines.forEach((line, i) => {
-    ctx.setFont(Font.systemFont(6));
+    ctx.setFont(Font.boldSystemFont(fSize));
     ctx.drawTextInRect(line, new Rect(0, size / 2 - totalH / 2 + i * (lineH + 1), size, lineH));
   });
 
