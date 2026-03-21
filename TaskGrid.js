@@ -372,20 +372,24 @@ function drawDonutChart(done, due, centerVal, size) {
   // midR ± capR がちょうど innerR〜outerR の範囲に収まる
   if (total > 0 && done > 0) {
     const doneStartAngle = startAngle - (done / total) * 2 * Math.PI;
-    [startAngle, doneStartAngle].forEach(angle => {
+    const borderCapR = capR + 0.8;
+    [startAngle, doneStartAngle].forEach((angle, i) => {
       const cx = center.x + midR * Math.cos(angle);
       const cy = center.y + midR * Math.sin(angle);
+      // 緑と青の境目（due > 0）のみ黒ボーダーキャップを先に描画
+      if (due > 0) {
+        const bp = new Path();
+        bp.addEllipse(new Rect(cx - borderCapR, cy - borderCapR, borderCapR * 2, borderCapR * 2));
+        ctx.addPath(bp);
+        ctx.setFillColor(new Color("#000000"));
+        ctx.fillPath();
+      }
       const cp = new Path();
       cp.addEllipse(new Rect(cx - capR, cy - capR, capR * 2, capR * 2));
       ctx.addPath(cp);
       ctx.setFillColor(COLOR_ACCENT);
       ctx.fillPath();
     });
-    // 緑と青の境目に黒のセパレーター
-    if (due > 0) {
-      [startAngle, doneStartAngle].forEach(angle =>
-        drawRingSeparator(ctx, center, innerR, outerR, angle));
-    }
   }
 
   // 中央テキスト（\n で複数行対応）
@@ -402,17 +406,6 @@ function drawDonutChart(done, due, centerVal, size) {
   });
 
   return ctx.getImage();
-}
-
-// リング上の境目に黒のセパレーターラインを描画
-function drawRingSeparator(ctx, center, innerR, outerR, angle) {
-  const p = new Path();
-  p.move(new Point(center.x + innerR * Math.cos(angle), center.y + innerR * Math.sin(angle)));
-  p.addLine(new Point(center.x + outerR * Math.cos(angle), center.y + outerR * Math.sin(angle)));
-  ctx.addPath(p);
-  ctx.setStrokeColor(new Color("#000000"));
-  ctx.setLineWidth(1.5);
-  ctx.strokePath();
 }
 
 // Path.addArc が使えないため、多角形で弧を近似して塗り潰す
@@ -650,18 +643,23 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
 
   // 黄緑弧の両端に丸キャップ（ホール抜き後）
   if (progress > 0.005 && progress < 0.995) {
+    const borderCapR = capR + 0.8;
     [startAngle, fillStartAngle].forEach(angle => {
       const cx = center.x + midR * Math.cos(angle);
       const cy = center.y + midR * Math.sin(angle);
+      // 黒ボーダーキャップを先に描画
+      const bp = new Path();
+      bp.addEllipse(new Rect(cx - borderCapR, cy - borderCapR, borderCapR * 2, borderCapR * 2));
+      ctx.addPath(bp);
+      ctx.setFillColor(new Color("#000000"));
+      ctx.fillPath();
+      // カラーキャップを上に重ねる
       const cp = new Path();
       cp.addEllipse(new Rect(cx - capR, cy - capR, capR * 2, capR * 2));
       ctx.addPath(cp);
       ctx.setFillColor(fillColor);
       ctx.fillPath();
     });
-    // 黄緑と青の境目に黒のセパレーター
-    [startAngle, fillStartAngle].forEach(angle =>
-      drawRingSeparator(ctx, center, innerR, outerR, angle));
   }
 
   // 中央コンテンツ（画像 or テキスト）
