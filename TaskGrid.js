@@ -483,12 +483,12 @@ function drawBarChart(data, width, height) {
     const { dayIndex, countThis, countPrev, isToday } = data[i];
     const slotLeft = Math.floor(i * slotW);
 
-    // 先週バー（左側・薄い緑）
+    // 先週バー（左側・グレー）
     if (countPrev > 0) {
       const capped = Math.min(countPrev, CAP_VAL);
       const barH   = Math.max(Math.round((capped / scaleMax) * maxBarH), 2);
       const bx     = Math.floor(slotLeft + slotW / 2 - halfW - gap / 2);
-      ctx.setFillColor(new Color("#30d158", 0.22));
+      ctx.setFillColor(new Color("#636366", 0.55));
       ctx.fillRect(new Rect(bx, chartH - barH, halfW, barH));
     }
 
@@ -500,8 +500,8 @@ function drawBarChart(data, width, height) {
       const bx       = Math.floor(slotLeft + slotW / 2 + gap / 2);
       const isCapped = countThis > CAP_VAL;
       const barColor = isCapped
-        ? (isToday ? new Color("#ffcc00") : new Color("#ffcc00", 0.45))
-        : (isToday ? COLOR_ACCENT : new Color("#30d158", 0.55));
+        ? (isToday ? new Color("#ffcc00") : new Color("#ffcc00", 0.35))
+        : (isToday ? COLOR_ACCENT : new Color("#30d158", 0.38));
       ctx.setFillColor(barColor);
       ctx.fillRect(new Rect(bx, by, halfW, barH));
     }
@@ -696,16 +696,16 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
     ctx.setTextAlignedCenter();
     ctx.setTextColor(COLOR_MAIN_VAL);
     if (lines.length === 1) {
-      ctx.setFont(Font.systemFont(6));
-      const tH = 8;
+      ctx.setFont(Font.boldSystemFont(9));
+      const tH = 11;
       ctx.drawTextInRect(lines[0], new Rect(0, size / 2 - tH / 2, size, tH));
     } else {
-      // 複数行：固定 6pt、行間 1pt
-      const fontSize = 6;
+      // 複数行：固定 9pt、行間 1pt
+      const fontSize = 9;
       const lineH = fontSize + 1;
       const totalH = lines.length * lineH + (lines.length - 1);
       lines.forEach((line, i) => {
-        ctx.setFont(Font.systemFont(fontSize));
+        ctx.setFont(Font.boldSystemFont(fontSize));
         const y = size / 2 - totalH / 2 + i * (lineH + 1);
         ctx.drawTextInRect(line, new Rect(0, y, size, lineH));
       });
