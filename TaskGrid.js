@@ -162,11 +162,10 @@ async function createWidget() {
   const lhLabel = lineHeader.addText("月次タスク数");
   lhLabel.font = Font.systemFont(7);
   lhLabel.textColor = COLOR_SUB_TEXT;
-  lineHeader.addSpacer(6);
+  lineHeader.addSpacer();
   addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}（${totalThis}件）`);
   lineHeader.addSpacer(4);
   addLegendDot(lineHeader, new Color("#636366"), `${prevYear}（${totalPrev}件）`);
-  lineHeader.addSpacer();
 
   lineCol.addSpacer(2);
   const lineImg = lineCol.addImage(drawLineChart(monthlyData, 195, 65, curMonth));
@@ -202,7 +201,7 @@ async function createWidget() {
   const gaugeInnerRow = gaugeBlock.addStack();
   gaugeInnerRow.layoutHorizontally();
   gaugeInnerRow.centerAlignContent();
-  const COLOR_GAUGE_TRACK = new Color("#007AFF", 0.35);  // ゲージ用薄いiOS青
+  const COLOR_GAUGE_TRACK = new Color("#007AFF");  // ゲージトラック（iOS青）
   addGaugeColumn(gaugeInnerRow, monthElapsed, GAUGE_SIZE,
     COLOR_GAUGE_TRACK, COLOR_YELLOW_GREEN,
     { type: "text", value: `残\n${monthRemainH}h` });
@@ -634,7 +633,7 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
   return ctx.getImage();
 }
 
-// ハート画像を取得（優先順: HEART_IMAGE_BASE64 → LifeMerter repo → SF Symbol）
+// ハート画像を取得（HEART_IMAGE_BASE64 が設定されていない場合は SF Symbol にフォールバック）
 async function loadHeartImage() {
   if (HEART_IMAGE_BASE64) {
     try {
@@ -643,17 +642,6 @@ async function loadHeartImage() {
       if (img) return img;
     } catch (e) {}
   }
-  try {
-    const req = new Request(
-      "https://raw.githubusercontent.com/chisatoo02018-collab/LifeMerter/main/LifeMerter.js"
-    );
-    const js = await req.loadString();
-    const match = js.match(/heartImageBase64[^"']*["']([A-Za-z0-9+/=]{500,})["']/);
-    if (match && match[1]) {
-      const data = Data.fromBase64String(match[1]);
-      return Image.fromData(data);
-    }
-  } catch (e) {}
   return SFSymbol.named("heart.fill").image;
 }
 
