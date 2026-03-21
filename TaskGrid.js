@@ -78,10 +78,12 @@ async function createWidget() {
     r.dueDate && isSameDay(r.dueDate, now)
   ).length;
   const centerTotal = doneDueToday + dueToday + doneToday - doneTodayDueToday;
-  const timedToday  = incomplete.filter(r => r.dueDate && isSameDay(r.dueDate, now) && r.dueDateIncludesTime).length;
-  const alldayToday = incomplete.filter(r => r.dueDate && isSameDay(r.dueDate, now) && !r.dueDateIncludesTime).length;
-  const rateToday   = centerTotal > 0 ? Math.round(doneToday / centerTotal * 100) : 0;
-  const centerStr   = `${centerTotal}件\n残${dueToday}件`;
+  const timedToday     = incomplete.filter(r => r.dueDate && isSameDay(r.dueDate, now) && r.dueDateIncludesTime).length;
+  const alldayToday    = incomplete.filter(r => r.dueDate && isSameDay(r.dueDate, now) && !r.dueDateIncludesTime).length;
+  const doneTimedToday = completed.filter(r => r.completionDate && isSameDay(r.completionDate, now) && r.dueDateIncludesTime).length;
+  const doneAlldayToday= completed.filter(r => r.completionDate && isSameDay(r.completionDate, now) && !r.dueDateIncludesTime).length;
+  const rateToday      = centerTotal > 0 ? Math.round(doneToday / centerTotal * 100) : 0;
+  const centerStr      = `${centerTotal}件\n残${dueToday}件`;
 
   // 1〜12月の月別データ（今年 vs 前年、折れ線グラフ用）
   const prevYear   = curYear - 1;
@@ -148,7 +150,8 @@ async function createWidget() {
   donutHeader.addSpacer();
 
   donutCol.addSpacer(8);  // 折れ線グラフ65pt表示領域の中央にドーナツを配置
-  addDonutColumn(donutCol, doneToday, dueToday, diffDay, timedToday, alldayToday, rateToday, centerStr);
+  addDonutColumn(donutCol, doneToday, dueToday, diffDay,
+    timedToday, alldayToday, doneTimedToday, doneAlldayToday, rateToday, centerStr);
 
   statsRow.addSpacer(6);
   const statDiv = statsRow.addStack();
@@ -240,7 +243,7 @@ async function createWidget() {
 // ドーナツカラム
 // --------------------------------------------------
 // done/due はドーナツ弧の色分け用、centerVal は中央表示文字列（\n区切り可）
-function addDonutColumn(container, done, due, diff, timed, allday, rate, centerVal) {
+function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, doneAllday, rate, centerVal) {
   const wrapper = container.addStack();
   wrapper.layoutHorizontally();
   wrapper.bottomAlignContent();     // ラベル群の下端（前日比:）を水平仕切り線に近づける
@@ -253,13 +256,13 @@ function addDonutColumn(container, done, due, diff, timed, allday, rate, centerV
 
   wrapper.addSpacer(6);
 
-  // テキスト列（右）— 4行（固定幅で数値右端を揃える）
+  // テキスト列（右）— 6行・フォント6pt（5文字ラベルが30ptに収まる）
   const textCol = wrapper.addStack();
   textCol.layoutVertically();
   textCol.centerAlignContent();
   textCol.size = new Size(52, 0);  // 112 - donut(54) - gap(6)
 
-  // ラベル固定幅(30pt) + 数値固定幅(22pt) = 52pt → 開始位置・右端が揃う
+  // ラベル固定幅(30pt) + 数値固定幅(22pt) = 52pt
   function addLabelRow(col, label, value, color) {
     const row = col.addStack();
     row.layoutHorizontally();
@@ -267,19 +270,21 @@ function addDonutColumn(container, done, due, diff, timed, allday, rate, centerV
     const lblBox = row.addStack();
     lblBox.size = new Size(30, 0);
     const lbl = lblBox.addText(label);
-    lbl.font      = Font.systemFont(7);
+    lbl.font      = Font.systemFont(6);
     lbl.textColor = COLOR_SUB_TEXT;
     const numBox = row.addStack();
     numBox.size = new Size(22, 0);
     numBox.addSpacer();
     const val = numBox.addText(value);
-    val.font      = Font.systemFont(7);
+    val.font      = Font.systemFont(6);
     val.textColor = color;
   }
 
-  addLabelRow(textCol, "時刻指定:", `${timed}`,   timed  > 0 ? COLOR_DUE    : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "終日指定:", `${allday}`,  allday > 0 ? COLOR_DUE    : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "完了率:",   `${rate}%`,   rate   > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "時刻指定:", `${timed}`,     timed     > 0 ? COLOR_DUE    : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "終日指定:", `${allday}`,    allday    > 0 ? COLOR_DUE    : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "完了時刻:", `${doneTimed}`, doneTimed > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "完了終日:", `${doneAllday}`,doneAllday> 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "完了率:",   `${rate}%`,     rate      > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
   const sign = diff > 0 ? "+" : "";
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
   addLabelRow(textCol, "前日比:",   `${sign}${diff}`, dColor);
