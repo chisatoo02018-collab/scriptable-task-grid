@@ -120,16 +120,31 @@ async function createWidget() {
   // ── 統計行：今日ドーナツ | 折れ線グラフ（6ヶ月） ──
   const statsRow = widget.addStack();
   statsRow.layoutHorizontally();
-  statsRow.centerAlignContent();
+  statsRow.topAlignContent();  // 上揃え：ヘッダー行の縦位置を月次タスク数ラベルに合わせる
 
   statsRow.addSpacer(5);  // 上段を少し右へオフセット
-  const todayYear  = `${curYear}`;
-  const mins       = String(now.getMinutes()).padStart(2, '0');
-  const todayDate  = `${curMonth + 1}/${now.getDate()} ${now.getHours()}:${mins}`;
-  addDonutColumn(statsRow, doneToday, dueToday, diffDay, centerTotal, todayYear, todayDate);
+
+  // ── 左カラム（ヘッダー＋ドーナツ＋ラベル） ──
+  const donutCol = statsRow.addStack();
+  donutCol.layoutVertically();
+
+  // ヘッダー行：日付+時刻（月次タスク数ラベルと同じ縦位置）
+  const mins      = String(now.getMinutes()).padStart(2, '0');
+  const todayDate = `${curMonth + 1}/${now.getDate()} ${now.getHours()}:${mins}`;
+  const donutHeader = donutCol.addStack();
+  donutHeader.layoutHorizontally();
+  donutHeader.centerAlignContent();
+  const dhLabel = donutHeader.addText(todayDate);
+  dhLabel.font      = Font.systemFont(8);
+  dhLabel.textColor = COLOR_MAIN_VAL;
+  donutHeader.addSpacer();
+
+  donutCol.addSpacer(2);
+  addDonutColumn(donutCol, doneToday, dueToday, diffDay, centerTotal);
+
   statsRow.addSpacer(6);
   const statDiv = statsRow.addStack();
-  statDiv.size = new Size(1, 62);
+  statDiv.size = new Size(1, 79);
   statDiv.backgroundColor = COLOR_DIVIDER;
   statsRow.addSpacer(8);
 
@@ -163,11 +178,11 @@ async function createWidget() {
   bottomRow.layoutHorizontally();
   bottomRow.centerAlignContent();
 
-  // 円形ゲージ（左）— ドーナツ中心 X に揃えるため 4pt オフセット
+  // 円形ゲージ（左）
   const gaugeRow = bottomRow.addStack();
   gaugeRow.layoutHorizontally();
   gaugeRow.centerAlignContent();
-  gaugeRow.addSpacer(7);  // donut center-X = 7 + GAUGE_SIZE/2 = 25pt = DONUT_SIZE/2 ✓
+  gaugeRow.addSpacer(7);
 
   addGaugeColumn(gaugeRow, monthElapsed, GAUGE_SIZE,
     COLOR_DUE, COLOR_YELLOW_GREEN,
@@ -177,12 +192,17 @@ async function createWidget() {
     COLOR_DUE, COLOR_YELLOW_GREEN,
     { type: "image", value: heartImage });
 
-  bottomRow.addSpacer();  // 折れ線グラフ列の直下に自然に揃う
+  // 下段の仕切り線（上段と同じ位置に揃える）
+  bottomRow.addSpacer(6);
+  const bottomDiv = bottomRow.addStack();
+  bottomDiv.size = new Size(1, 46);
+  bottomDiv.backgroundColor = COLOR_DIVIDER;
+  bottomRow.addSpacer(8);
 
   // バーチャート列（右）
   const barCol = bottomRow.addStack();
   barCol.layoutVertically();
-  const barLabel = barCol.addText("日次完了タスク数");
+  const barLabel = barCol.addText("日次タスク数");
   barLabel.font = Font.systemFont(8);
   barLabel.textColor = COLOR_SUB_TEXT;
   barCol.addSpacer(3);
@@ -197,12 +217,12 @@ async function createWidget() {
 // --------------------------------------------------
 // ドーナツカラム
 // --------------------------------------------------
-// done/due はドーナツ弧の色分け用、centerVal は中央表示値、dateLabel は日付文字列
-function addDonutColumn(container, done, due, diff, centerVal, dateYear, dateDay) {
+// done/due はドーナツ弧の色分け用、centerVal は中央表示値
+function addDonutColumn(container, done, due, diff, centerVal) {
   const wrapper = container.addStack();
   wrapper.layoutHorizontally();
   wrapper.centerAlignContent();
-  wrapper.size = new Size(110, 0);  // 幅を広げてテキストの切れを防ぐ
+  wrapper.size = new Size(110, 0);
 
   // ドーナツグラフ（左）
   const imgView = wrapper.addImage(drawDonutChart(done, due, centerVal, DONUT_SIZE));
@@ -211,20 +231,10 @@ function addDonutColumn(container, done, due, diff, centerVal, dateYear, dateDay
 
   wrapper.addSpacer(6);
 
-  // テキスト列（右）— 46pt 高さに収まるようスペーサー最小化
+  // テキスト列（右）— 完了/未完了/前日比の3行
   const textCol = wrapper.addStack();
   textCol.layoutVertically();
-
-  const t1 = textCol.addText(dateYear);
-  t1.font      = Font.systemFont(8);
-  t1.textColor = COLOR_SUB_TEXT;
-  textCol.addSpacer(1);
-  // 日付+時刻：左揃え（右揃えにすると幅不足で切れるため）
-  const t2 = textCol.addText(dateDay);
-  t2.font      = Font.systemFont(7);
-  t2.textColor = COLOR_MAIN_VAL;
-
-  textCol.addSpacer(3);
+  textCol.centerAlignContent();
 
   // 完了件数（緑）
   const row1 = textCol.addStack();
@@ -568,7 +578,7 @@ function addLegendDot(container, color, label) {
   dot.cornerRadius = 3;
   container.addSpacer(2);
   const t = container.addText(label);
-  t.font = Font.systemFont(7);
+  t.font = Font.systemFont(6);
   t.textColor = COLOR_SUB_TEXT;
 }
 
