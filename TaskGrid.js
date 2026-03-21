@@ -48,7 +48,7 @@ function isSameYear(d, y)     { return d.getFullYear() === y; }
 async function createWidget() {
   const widget = new ListWidget();
   widget.backgroundColor = COLOR_BG;
-  widget.setPadding(8, 16, 8, 16);
+  widget.setPadding(2, 2, 2, 2);
 
   // --- データ取得 ---
   let calendars;
@@ -131,14 +131,14 @@ async function createWidget() {
 
   // ==================== 描画 ====================
 
-  widget.addSpacer(2);
+  widget.addSpacer(1);
 
   // ── 統計行：今日ドーナツ | 折れ線グラフ（6ヶ月） ──
   const statsRow = widget.addStack();
   statsRow.layoutHorizontally();
   statsRow.topAlignContent();  // 上揃え：ヘッダー行の縦位置を月次タスク数ラベルに合わせる
 
-  statsRow.addSpacer(5);  // 上段を少し右へオフセット
+  statsRow.addSpacer(2);  // 上段を少し右へオフセット
 
   // ── 左カラム（ヘッダー＋ドーナツ＋ラベル） ──
   const donutCol = statsRow.addStack();
@@ -189,9 +189,9 @@ async function createWidget() {
   lineImg.resizable = false;
   lineImg.imageSize = new Size(195, 65);
 
-  widget.addSpacer(2);
+  widget.addSpacer(1);
   addHorizontalLine(widget);
-  widget.addSpacer(3);  // 仕切り線から下段を少し離す
+  widget.addSpacer(2);  // 仕切り線から下段を少し離す
 
   // ── 下段：円形ゲージ（左・ドーナツ下）| 日次バーチャート（右・折れ線下） ──
   const bottomRow = widget.addStack();
@@ -199,7 +199,7 @@ async function createWidget() {
   bottomRow.topAlignContent();  // ラベルを上の仕切り線寄りに配置
 
   // 円形ゲージ（左）＋「残時間」ラベル
-  bottomRow.addSpacer(7);  // 左マージン
+  bottomRow.addSpacer(2);  // 左マージン
   const gaugeBlock = bottomRow.addStack();
   gaugeBlock.layoutVertically();
   gaugeBlock.size = new Size(100, 0);  // gauge1(46) + gap(8) + gauge2(46)
@@ -227,8 +227,8 @@ async function createWidget() {
     COLOR_GAUGE_TRACK, COLOR_ACCENT,
     { type: "image", value: heartImage });
 
-  // 下段の仕切り線（7 + 100 + 16 = 123pt → 上段と同じ位置）
-  bottomRow.addSpacer(16);
+  // 下段の仕切り線（2 + 100 + 18 = 120pt → 上段と同じ位置）
+  bottomRow.addSpacer(18);
   const bottomDiv = bottomRow.addStack();
   bottomDiv.size = new Size(1, 56);
   bottomDiv.backgroundColor = COLOR_DIVIDER;
@@ -460,7 +460,7 @@ function drawBarChart(data, width, height) {
     gp.move(new Point(0, ty));
     gp.addLine(new Point(plotW, ty));
     ctx.addPath(gp);
-    ctx.setStrokeColor(new Color("#3a3a3c", 0.5));
+    ctx.setStrokeColor(new Color("#3a3a3c", 0.25));
     ctx.setLineWidth(0.5);
     ctx.strokePath();
     ctx.setFont(Font.systemFont(6));
@@ -547,7 +547,7 @@ function drawLineChart(data, width, height, curMonthIdx) {
     gp.move(new Point(4, y));
     gp.addLine(new Point(plotW - 4, y));
     ctx.addPath(gp);
-    ctx.setStrokeColor(new Color("#3a3a3c", v === 0 ? 0.65 : 0.35));
+    ctx.setStrokeColor(new Color("#3a3a3c", v === 0 ? 0.50 : 0.20));
     ctx.setLineWidth(0.5);
     ctx.strokePath();
     // Y軸ラベル（右端にさりげなく）
