@@ -356,9 +356,24 @@ function drawDonutChart(done, due, centerVal, size) {
       const doneStartAngle = startAngle - (done / total) * 2 * Math.PI;
       fillArcSegment(ctx, center, outerR, doneStartAngle, startAngle, COLOR_ACCENT);
     }
+
+    // 黒ボーダーキャップ（ホール抜き前に描画→内側は後のホール抜きで消える）
+    if (done > 0 && due > 0) {
+      const doneStartAngle = startAngle - (done / total) * 2 * Math.PI;
+      const borderCapR = capR + 0.8;
+      [startAngle, doneStartAngle].forEach(angle => {
+        const cx = center.x + midR * Math.cos(angle);
+        const cy = center.y + midR * Math.sin(angle);
+        const bp = new Path();
+        bp.addEllipse(new Rect(cx - borderCapR, cy - borderCapR, borderCapR * 2, borderCapR * 2));
+        ctx.addPath(bp);
+        ctx.setFillColor(new Color("#000000"));
+        ctx.fillPath();
+      });
+    }
   }
 
-  // 中心をくり抜いてドーナツ形状に
+  // 中心をくり抜いてドーナツ形状に（黒ボーダーの内側部分もここで消える）
   const hole = new Path();
   hole.addEllipse(new Rect(
     size / 2 - innerR, size / 2 - innerR,
@@ -368,22 +383,12 @@ function drawDonutChart(done, due, centerVal, size) {
   ctx.setFillColor(COLOR_BG);
   ctx.fillPath();
 
-  // 緑弧の両端に丸キャップを描画（ホール抜き後なのでリング帯内に収まる）
-  // midR ± capR がちょうど innerR〜outerR の範囲に収まる
+  // 緑弧の両端に丸キャップを描画（ホール抜き後）
   if (total > 0 && done > 0) {
     const doneStartAngle = startAngle - (done / total) * 2 * Math.PI;
-    const borderCapR = capR + 0.8;
-    [startAngle, doneStartAngle].forEach((angle, i) => {
+    [startAngle, doneStartAngle].forEach(angle => {
       const cx = center.x + midR * Math.cos(angle);
       const cy = center.y + midR * Math.sin(angle);
-      // 緑と青の境目（due > 0）のみ黒ボーダーキャップを先に描画
-      if (due > 0) {
-        const bp = new Path();
-        bp.addEllipse(new Rect(cx - borderCapR, cy - borderCapR, borderCapR * 2, borderCapR * 2));
-        ctx.addPath(bp);
-        ctx.setFillColor(new Color("#000000"));
-        ctx.fillPath();
-      }
       const cp = new Path();
       cp.addEllipse(new Rect(cx - capR, cy - capR, capR * 2, capR * 2));
       ctx.addPath(cp);
@@ -634,7 +639,21 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
     fillArcSegment(ctx, center, outerR, fillStartAngle, startAngle, fillColor);
   }
 
-  // 中心をくり抜いてリング形状に
+  // 黒ボーダーキャップ（ホール抜き前に描画→内側は後のホール抜きで消える）
+  if (progress > 0.005 && progress < 0.995) {
+    const borderCapR = capR + 0.8;
+    [startAngle, fillStartAngle].forEach(angle => {
+      const cx = center.x + midR * Math.cos(angle);
+      const cy = center.y + midR * Math.sin(angle);
+      const bp = new Path();
+      bp.addEllipse(new Rect(cx - borderCapR, cy - borderCapR, borderCapR * 2, borderCapR * 2));
+      ctx.addPath(bp);
+      ctx.setFillColor(new Color("#000000"));
+      ctx.fillPath();
+    });
+  }
+
+  // 中心をくり抜いてリング形状に（黒ボーダーの内側部分もここで消える）
   const hole = new Path();
   hole.addEllipse(new Rect(size / 2 - innerR, size / 2 - innerR, innerR * 2, innerR * 2));
   ctx.addPath(hole);
@@ -643,17 +662,9 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
 
   // 黄緑弧の両端に丸キャップ（ホール抜き後）
   if (progress > 0.005 && progress < 0.995) {
-    const borderCapR = capR + 0.8;
     [startAngle, fillStartAngle].forEach(angle => {
       const cx = center.x + midR * Math.cos(angle);
       const cy = center.y + midR * Math.sin(angle);
-      // 黒ボーダーキャップを先に描画
-      const bp = new Path();
-      bp.addEllipse(new Rect(cx - borderCapR, cy - borderCapR, borderCapR * 2, borderCapR * 2));
-      ctx.addPath(bp);
-      ctx.setFillColor(new Color("#000000"));
-      ctx.fillPath();
-      // カラーキャップを上に重ねる
       const cp = new Path();
       cp.addEllipse(new Rect(cx - capR, cy - capR, capR * 2, capR * 2));
       ctx.addPath(cp);
