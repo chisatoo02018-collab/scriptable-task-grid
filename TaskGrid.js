@@ -8,7 +8,7 @@ const COLOR_MINUS    = new Color("#ff453a");    // 赤（マイナス）
 const COLOR_MAIN_VAL = new Color("#ffffff");    // メイン数字
 const COLOR_SUB_TEXT = new Color("#8e8e93");    // サブテキスト
 const COLOR_BG       = new Color("#1c1c1e");    // 背景
-const COLOR_DUE         = new Color("#09AEFA");    // 残りタスク・ゲージトラック（iOS青）
+const COLOR_DUE         = new Color("#007AFF");    // 残りタスク・ゲージトラック（iOS青）
 const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
 const DONUT_SIZE     = 54;                      // ドーナツグラフのサイズ（pt）
 const GAUGE_SIZE     = 46;                      // 円形ゲージのサイズ（pt）
@@ -381,11 +381,6 @@ function drawDonutChart(done, due, centerVal, size) {
       ctx.fillPath();
     });
 
-    // 緑と青の境目に細い黒線セパレーター（キャップの上に重ねる）
-    if (due > 0) {
-      [startAngle, doneStartAngle].forEach(angle =>
-        drawRingSeparator(ctx, center, innerR, outerR, angle));
-    }
   }
 
   // 中央テキスト（\n で複数行対応）
@@ -402,17 +397,6 @@ function drawDonutChart(done, due, centerVal, size) {
   });
 
   return ctx.getImage();
-}
-
-// リング上の境目に細い黒線セパレーターを描画（キャップの上に重ねる）
-function drawRingSeparator(ctx, center, innerR, outerR, angle) {
-  const p = new Path();
-  p.move(new Point(center.x + innerR * Math.cos(angle), center.y + innerR * Math.sin(angle)));
-  p.addLine(new Point(center.x + outerR * Math.cos(angle), center.y + outerR * Math.sin(angle)));
-  ctx.addPath(p);
-  ctx.setStrokeColor(new Color("#000000"));
-  ctx.setLineWidth(0.75);
-  ctx.strokePath();
 }
 
 // Path.addArc が使えないため、多角形で弧を近似して塗り潰す
@@ -444,7 +428,7 @@ function drawBarChart(data, width, height) {
   ctx.respectScreenScale = true;
 
   const n        = data.length;
-  const LABEL_H  = 8;                    // 曜日ラベル領域
+  const LABEL_H  = 6;                    // 曜日ラベル領域
   const NUM_H    = 9;                    // 件数ラベル領域
   const CAP_VAL  = 15;                   // 棒の高さ上限（超えたら "15+" 表示）
   const chartH   = height - LABEL_H;
@@ -503,8 +487,8 @@ function drawLineChart(data, width, height, curMonthIdx) {
   ctx.respectScreenScale = true;
 
   const n       = data.length;    // 12
-  const LABEL_H = 8;
-  const TOP_PAD = 4;
+  const LABEL_H = 6;
+  const TOP_PAD = 1;
   const YAXIS_W = 18;             // 右端Y軸ラベル領域（pt）
   const chartH  = height - LABEL_H - TOP_PAD;
   const plotW   = width - YAXIS_W;  // グラフ実描画幅
@@ -659,9 +643,6 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
       ctx.setFillColor(fillColor);
       ctx.fillPath();
     });
-    // 黄緑と青の境目に細い黒線セパレーター（キャップの上に重ねる）
-    [startAngle, fillStartAngle].forEach(angle =>
-      drawRingSeparator(ctx, center, innerR, outerR, angle));
   }
 
   // 中央コンテンツ（画像 or テキスト）
