@@ -183,11 +183,11 @@ async function createWidget() {
   addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}（${totalThis}件）`, COLOR_MAIN_VAL);
   lineHeader.addSpacer(4);
   addLegendDot(lineHeader, new Color("#636366"), `${prevYear}（${totalPrev}件）`, COLOR_SUB_TEXT);
+  lineHeader.addSpacer(3);  // 凡例右余白
 
   lineCol.addSpacer(2);
   const lineImg = lineCol.addImage(drawLineChart(monthlyData, 195, 65, curMonth));
-  lineImg.resizable = false;
-  lineImg.imageSize = new Size(195, 65);
+  lineImg.resizable = true;
 
   widget.addSpacer(1);
   addHorizontalLine(widget);
@@ -243,8 +243,7 @@ async function createWidget() {
   barCol.addSpacer(3);
   const chartImage = drawBarChart(weekData, 195, 44);
   const chartView  = barCol.addImage(chartImage);
-  chartView.resizable = false;
-  chartView.imageSize = new Size(195, 44);
+  chartView.resizable = true;
 
   return widget;
 }
