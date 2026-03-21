@@ -440,7 +440,7 @@ function drawBarChart(data, width, height) {
   ctx.respectScreenScale = true;
 
   const n           = data.length;
-  const LABEL_H     = 8;                 // 曜日ラベル領域
+  const LABEL_H     = 6;                 // 曜日ラベル領域
   const BAR_YAXIS_W = 12;                // 右端Y軸ラベル領域
   const CAP_VAL     = 15;
   const chartH      = height - LABEL_H;
