@@ -218,7 +218,10 @@ function addDonutColumn(container, done, due, diff, centerVal, dateYear, dateDay
   t1.font      = Font.systemFont(8);
   t1.textColor = COLOR_SUB_TEXT;
   textCol.addSpacer(1);
-  const t2 = textCol.addText(dateDay);
+  const dateRow = textCol.addStack();
+  dateRow.layoutHorizontally();
+  dateRow.addSpacer();
+  const t2 = dateRow.addText(dateDay);
   t2.font      = Font.semiboldSystemFont(10);
   t2.textColor = COLOR_MAIN_VAL;
 
@@ -240,6 +243,9 @@ function addDonutColumn(container, done, due, diff, centerVal, dateYear, dateDay
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
   const row3 = textCol.addStack();
   row3.layoutHorizontally();
+  const l3 = row3.addText("日比:");
+  l3.font      = Font.systemFont(9);
+  l3.textColor = COLOR_SUB_TEXT;
   row3.addSpacer();
   const v3 = row3.addText(`${sign}${diff}`);
   v3.font      = Font.systemFont(9);
@@ -257,7 +263,7 @@ function drawDonutChart(done, due, centerVal, size) {
 
   const center = new Point(size / 2, size / 2);
   const outerR = size / 2 - 0.5;
-  const innerR = outerR * 0.75;   // ドーナツの穴の割合（細いリング・大きな穴）
+  const innerR = outerR - 4;      // リング幅 4pt（ゲージと統一）
   const total  = done + due;
 
   if (total === 0) {
@@ -295,7 +301,7 @@ function drawDonutChart(done, due, centerVal, size) {
 
   // 中央テキスト：今日の総タスク数
   const label    = `${centerVal}`;
-  const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 11 : label.length === 2 ? 13 : 15;
+  const fontSize = label.length >= 4 ? 8 : label.length === 3 ? 9 : label.length === 2 ? 10 : 11;
   ctx.setFont(Font.boldSystemFont(fontSize));
   ctx.setTextColor(centerVal > 0 ? COLOR_MAIN_VAL : new Color("#8e8e93", 0.6));
   ctx.setTextAlignedCenter();
@@ -336,7 +342,7 @@ function drawBarChart(data, width, height) {
   const n        = data.length;
   const LABEL_H  = 11;                   // 曜日ラベル領域
   const NUM_H    = 9;                    // 件数ラベル領域
-  const CAP_VAL  = 12;                   // 棒の高さ上限（超えたら飽和表示）
+  const CAP_VAL  = 15;                   // 棒の高さ上限（超えたら "15+" 表示）
   const chartH   = height - LABEL_H;
   const rawMax   = Math.max(...data.map(d => d.count), 1);
   const scaleMax = Math.min(rawMax, CAP_VAL);  // スケール上限
@@ -364,7 +370,7 @@ function drawBarChart(data, width, height) {
 
     // カウントラベル（バー上部・上限超えは "n+" 表記）
     if (count > 0) {
-      const numLabel = isCapped ? `${count}+` : `${count}`;
+      const numLabel = isCapped ? `${CAP_VAL}+` : `${count}`;
       ctx.setFont(Font.systemFont(7));
       ctx.setTextColor(isToday ? COLOR_MAIN_VAL : new Color("#8e8e93", 0.75));
       ctx.setTextAlignedCenter();
