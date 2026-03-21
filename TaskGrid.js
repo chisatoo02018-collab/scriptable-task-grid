@@ -8,7 +8,7 @@ const COLOR_MINUS    = new Color("#ff453a");    // 赤（マイナス）
 const COLOR_MAIN_VAL = new Color("#ffffff");    // メイン数字
 const COLOR_SUB_TEXT = new Color("#8e8e93");    // サブテキスト
 const COLOR_BG       = new Color("#1c1c1e");    // 背景
-const COLOR_DUE         = new Color("#0a84ff");    // 残りタスク（青）
+const COLOR_DUE         = new Color("#5ac8fa");    // 残りタスク・ゲージトラック（水色）
 const COLOR_YELLOW_GREEN = new Color("#aaed6f");   // 消費済み時間（黄緑）
 const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
 const DONUT_SIZE     = 54;                      // ドーナツグラフのサイズ（pt）
@@ -139,7 +139,7 @@ async function createWidget() {
   donutHeader.centerAlignContent();
   donutHeader.addSpacer();
   const dhLabel = donutHeader.addText(todayDate);
-  dhLabel.font      = Font.systemFont(6);
+  dhLabel.font      = Font.systemFont(7);
   dhLabel.textColor = COLOR_SUB_TEXT;   // 月次タスク数ラベルと同じグレー
   donutHeader.addSpacer();
 
@@ -160,7 +160,7 @@ async function createWidget() {
   lineHeader.layoutHorizontally();
   lineHeader.centerAlignContent();
   const lhLabel = lineHeader.addText("月次タスク数");
-  lhLabel.font = Font.systemFont(6);
+  lhLabel.font = Font.systemFont(7);
   lhLabel.textColor = COLOR_SUB_TEXT;
   lineHeader.addSpacer(6);
   addLegendDot(lineHeader, COLOR_ACCENT, `${curYear}（${totalThis}件）`);
@@ -193,7 +193,7 @@ async function createWidget() {
   gLabelRow.layoutHorizontally();
   gLabelRow.addSpacer();
   const gLabel = gLabelRow.addText("消費時間");
-  gLabel.font      = Font.systemFont(6);
+  gLabel.font      = Font.systemFont(7);
   gLabel.textColor = COLOR_SUB_TEXT;
   gLabelRow.addSpacer();
   gaugeBlock.addSpacer(2);
@@ -202,10 +202,10 @@ async function createWidget() {
   const gaugeInnerRow = gaugeBlock.addStack();
   gaugeInnerRow.layoutHorizontally();
   gaugeInnerRow.centerAlignContent();
-  const COLOR_GAUGE_TRACK = new Color("#0a84ff", 0.35);  // ゲージ用薄い青
+  const COLOR_GAUGE_TRACK = new Color("#5ac8fa", 0.35);  // ゲージ用薄い水色
   addGaugeColumn(gaugeInnerRow, monthElapsed, GAUGE_SIZE,
     COLOR_GAUGE_TRACK, COLOR_YELLOW_GREEN,
-    { type: "text", value: `${monthRemainH}h` });
+    { type: "text", value: `残\n${monthRemainH}h` });
   gaugeInnerRow.addSpacer(8);
   addGaugeColumn(gaugeInnerRow, lifeElapsed, GAUGE_SIZE,
     COLOR_GAUGE_TRACK, COLOR_YELLOW_GREEN,
@@ -222,7 +222,7 @@ async function createWidget() {
   const barCol = bottomRow.addStack();
   barCol.layoutVertically();
   const barLabel = barCol.addText("日次タスク数");
-  barLabel.font = Font.systemFont(6);
+  barLabel.font = Font.systemFont(7);
   barLabel.textColor = COLOR_SUB_TEXT;
   barCol.addSpacer(3);
   const chartImage = drawBarChart(dailyCounts, 195, 44);
@@ -425,7 +425,7 @@ function drawBarChart(data, width, height) {
     }
 
     // 曜日ラベル（下端）
-    ctx.setFont(Font.systemFont(8));
+    ctx.setFont(Font.systemFont(6));
     ctx.setTextColor(isToday ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
     ctx.setTextAlignedCenter();
     ctx.drawTextInRect(dayNames[date.getDay()], new Rect(i * slotW, chartH + 1, slotW, LABEL_H));
@@ -610,13 +610,25 @@ function drawRingGauge(progress, size, trackColor, fillColor, centerContent) {
     ctx.drawImageInRect(centerContent.value,
       new Rect(size / 2 - hSize / 2, size / 2 - hSize / 2, hSize, hSize));
   } else if (centerContent && centerContent.value != null) {
-    const txt = String(centerContent.value);
-    const fontSize = txt.length >= 4 ? 7 : 8;
-    ctx.setFont(Font.boldSystemFont(fontSize));
-    ctx.setTextColor(COLOR_MAIN_VAL);
+    const lines = String(centerContent.value).split('\n');
     ctx.setTextAlignedCenter();
-    const tH = fontSize + 2;
-    ctx.drawTextInRect(txt, new Rect(0, size / 2 - tH / 2, size, tH));
+    ctx.setTextColor(COLOR_MAIN_VAL);
+    if (lines.length === 1) {
+      const fontSize = lines[0].length >= 4 ? 7 : 8;
+      ctx.setFont(Font.boldSystemFont(fontSize));
+      const tH = fontSize + 2;
+      ctx.drawTextInRect(lines[0], new Rect(0, size / 2 - tH / 2, size, tH));
+    } else {
+      // 複数行：固定 fontSize 7、行間 1pt
+      const fontSize = 7;
+      const lineH = fontSize + 1;
+      const totalH = lines.length * lineH + (lines.length - 1);
+      lines.forEach((line, i) => {
+        ctx.setFont(Font.boldSystemFont(fontSize));
+        const y = size / 2 - totalH / 2 + i * (lineH + 1);
+        ctx.drawTextInRect(line, new Rect(0, y, size, lineH));
+      });
+    }
   }
 
   return ctx.getImage();
