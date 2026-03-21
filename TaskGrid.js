@@ -262,17 +262,17 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
   textCol.centerAlignContent();
   textCol.size = new Size(52, 0);  // 112 - donut(54) - gap(6)
 
-  // セクションヘッダー行（5pt・全幅・左寄せ）
+  // セクションヘッダー行（全幅・左寄せ）
   function addHeaderRow(col, label) {
     const row = col.addStack();
     row.layoutHorizontally();
     const hdr = row.addText(label);
-    hdr.font      = Font.systemFont(5);
+    hdr.font      = Font.systemFont(6);
     hdr.textColor = COLOR_SUB_TEXT;
     row.addSpacer();
   }
 
-  // ラベル固定幅(30pt) + 数値固定幅(22pt) = 52pt（6pt）
+  // サブ行：ラベル固定幅(30pt) + 数値固定幅(22pt) = 52pt
   function addLabelRow(col, label, value, color) {
     const row = col.addStack();
     row.layoutHorizontally();
@@ -290,6 +290,20 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
     val.textColor = color;
   }
 
+  // 統計行：ラベル左端・値右端（セクションと同じ階層に見せる）
+  function addFlatRow(col, label, value, color) {
+    const row = col.addStack();
+    row.layoutHorizontally();
+    row.centerAlignContent();
+    const lbl = row.addText(label);
+    lbl.font      = Font.systemFont(6);
+    lbl.textColor = COLOR_SUB_TEXT;
+    row.addSpacer();
+    const val = row.addText(value);
+    val.font      = Font.systemFont(6);
+    val.textColor = color;
+  }
+
   // 完了セクション
   addHeaderRow(textCol, "完了");
   addLabelRow(textCol, "時刻指定:", `${doneTimed}`,  doneTimed  > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
@@ -298,11 +312,11 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
   addHeaderRow(textCol, "未完了");
   addLabelRow(textCol, "時刻指定:", `${timed}`,      timed  > 0 ? COLOR_DUE : COLOR_SUB_TEXT);
   addLabelRow(textCol, "終日指定:", `${allday}`,     allday > 0 ? COLOR_DUE : COLOR_SUB_TEXT);
-  // 統計
-  addLabelRow(textCol, "完了率:",   `${rate}%`,      COLOR_SUB_TEXT);
+  // 統計（同階層・左端揃え）
+  addFlatRow(textCol, "完了率:", `${rate}%`, COLOR_SUB_TEXT);
   const sign = diff > 0 ? "+" : "";
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
-  addLabelRow(textCol, "前日比:",   `${sign}${diff}`, dColor);
+  addFlatRow(textCol, "前日比:", `${sign}${diff}`, dColor);
 }
 
 // --------------------------------------------------
@@ -377,9 +391,9 @@ function drawDonutChart(done, due, centerVal, size) {
   const lineH  = fSize + 2;
   const totalH = lines.length * lineH + (lines.length - 1);
   const hasContent = total > 0;
-  ctx.setTextColor(hasContent ? COLOR_MAIN_VAL : new Color("#8e8e93", 0.6));
+  ctx.setTextColor(COLOR_SUB_TEXT);
   lines.forEach((line, i) => {
-    ctx.setFont(Font.boldSystemFont(fSize));
+    ctx.setFont(Font.systemFont(fSize));
     ctx.drawTextInRect(line, new Rect(0, size / 2 - totalH / 2 + i * (lineH + 1), size, lineH));
   });
 
