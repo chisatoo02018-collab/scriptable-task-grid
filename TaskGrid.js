@@ -3,7 +3,7 @@
 // ==========================================
 const TARGET_LIST_NAME = "";
 
-const COLOR_ACCENT   = new Color("#aaed6f");   // 黄緑（完了・消費時間など統一色）
+const COLOR_ACCENT   = new Color("#30d158");   // 黄緑（完了・消費時間など統一色）
 const COLOR_MINUS    = new Color("#ff453a");    // 赤（マイナス）
 const COLOR_MAIN_VAL = new Color("#ffffff");    // メイン数字
 const COLOR_SUB_TEXT = new Color("#8e8e93");    // サブテキスト
@@ -452,7 +452,7 @@ function drawBarChart(data, width, height) {
     // バー（上限超えは黄色でハイライト）
     const barColor = isCapped
       ? (isToday ? new Color("#ffcc00") : new Color("#ffcc00", 0.45))
-      : (isToday ? COLOR_ACCENT : new Color("#aaed6f", 0.30));
+      : (isToday ? COLOR_ACCENT : new Color("#30d158", 0.30));
     ctx.setFillColor(barColor);
     ctx.fillRect(new Rect(bx, by, barW, barH));
 
@@ -552,7 +552,7 @@ function drawLineChart(data, width, height, curMonthIdx) {
     const below = data[i].doneThis < data[i].donePrev;
     const dotColor = below
       ? (i === curMonthIdx ? new Color("#ff453a") : new Color("#ff453a", 0.7))
-      : (i === curMonthIdx ? COLOR_ACCENT : new Color("#aaed6f", 0.7));
+      : (i === curMonthIdx ? COLOR_ACCENT : new Color("#30d158", 0.7));
     const p = new Path();
     p.addEllipse(new Rect(x - r, y - r, r * 2, r * 2));
     ctx.addPath(p);
