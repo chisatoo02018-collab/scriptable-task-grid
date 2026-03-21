@@ -78,6 +78,10 @@ async function createWidget() {
     r.dueDate && isSameDay(r.dueDate, now)
   ).length;
   const centerTotal = doneDueToday + dueToday + doneToday - doneTodayDueToday;
+  const timedToday  = incomplete.filter(r => r.dueDate && isSameDay(r.dueDate, now) && r.dueDateIncludesTime).length;
+  const alldayToday = incomplete.filter(r => r.dueDate && isSameDay(r.dueDate, now) && !r.dueDateIncludesTime).length;
+  const rateToday   = centerTotal > 0 ? Math.round(doneToday / centerTotal * 100) : 0;
+  const centerStr   = `${centerTotal}件\n残${dueToday}件`;
 
   // 1〜12月の月別データ（今年 vs 前年、折れ線グラフ用）
   const prevYear   = curYear - 1;
@@ -144,7 +148,7 @@ async function createWidget() {
   donutHeader.addSpacer();
 
   donutCol.addSpacer(8);  // 折れ線グラフ65pt表示領域の中央にドーナツを配置
-  addDonutColumn(donutCol, doneToday, dueToday, diffDay, centerTotal);
+  addDonutColumn(donutCol, doneToday, dueToday, diffDay, timedToday, alldayToday, rateToday, centerStr);
 
   statsRow.addSpacer(6);
   const statDiv = statsRow.addStack();
@@ -235,8 +239,8 @@ async function createWidget() {
 // --------------------------------------------------
 // ドーナツカラム
 // --------------------------------------------------
-// done/due はドーナツ弧の色分け用、centerVal は中央表示値
-function addDonutColumn(container, done, due, diff, centerVal) {
+// done/due はドーナツ弧の色分け用、centerVal は中央表示文字列（\n区切り可）
+function addDonutColumn(container, done, due, diff, timed, allday, rate, centerVal) {
   const wrapper = container.addStack();
   wrapper.layoutHorizontally();
   wrapper.bottomAlignContent();     // ラベル群の下端（前日比:）を水平仕切り線に近づける
@@ -249,7 +253,7 @@ function addDonutColumn(container, done, due, diff, centerVal) {
 
   wrapper.addSpacer(6);
 
-  // テキスト列（右）— 完了/未完了/前日比の3行（固定幅で数値右端を揃える）
+  // テキスト列（右）— 4行（固定幅で数値右端を揃える）
   const textCol = wrapper.addStack();
   textCol.layoutVertically();
   textCol.centerAlignContent();
@@ -261,23 +265,24 @@ function addDonutColumn(container, done, due, diff, centerVal) {
     row.layoutHorizontally();
     row.centerAlignContent();
     const lblBox = row.addStack();
-    lblBox.size = new Size(30, 0);   // 全ラベルが同じX位置から始まる
+    lblBox.size = new Size(30, 0);
     const lbl = lblBox.addText(label);
     lbl.font      = Font.systemFont(7);
     lbl.textColor = COLOR_SUB_TEXT;
     const numBox = row.addStack();
-    numBox.size = new Size(22, 0);   // 数値右端が常に同じ位置
+    numBox.size = new Size(22, 0);
     numBox.addSpacer();
     const val = numBox.addText(value);
     val.font      = Font.systemFont(7);
     val.textColor = color;
   }
 
-  addLabelRow(textCol, "完了:",   `${done}`,          done > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
-  addLabelRow(textCol, "未完了:", `${due}`,            due  > 0 ? COLOR_DUE   : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "時刻指定:", `${timed}`,   timed  > 0 ? COLOR_DUE    : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "終日指定:", `${allday}`,  allday > 0 ? COLOR_DUE    : COLOR_SUB_TEXT);
+  addLabelRow(textCol, "完了率:",   `${rate}%`,   rate   > 0 ? COLOR_ACCENT : COLOR_SUB_TEXT);
   const sign = diff > 0 ? "+" : "";
   const dColor = diff > 0 ? COLOR_ACCENT : diff < 0 ? COLOR_MINUS : COLOR_SUB_TEXT;
-  addLabelRow(textCol, "前日比:", `${sign}${diff}`,   dColor);
+  addLabelRow(textCol, "前日比:",   `${sign}${diff}`, dColor);
 }
 
 // --------------------------------------------------
@@ -345,14 +350,18 @@ function drawDonutChart(done, due, centerVal, size) {
     });
   }
 
-  // 中央テキスト：今日の総タスク数
-  const label    = `${centerVal}件`;
-  const fontSize = label.length >= 4 ? 7 : 8;  // ゲージ中央テキストと同じ基準
-  ctx.setFont(Font.boldSystemFont(fontSize));
-  ctx.setTextColor(centerVal > 0 ? COLOR_MAIN_VAL : new Color("#8e8e93", 0.6));
+  // 中央テキスト（\n で複数行対応）
   ctx.setTextAlignedCenter();
-  const tH = fontSize + 3;
-  ctx.drawTextInRect(label, new Rect(0, size / 2 - tH / 2, size, tH));
+  const lines = String(centerVal).split('\n');
+  const fSize  = 7;
+  const lineH  = fSize + 2;
+  const totalH = lines.length * lineH + (lines.length - 1);
+  const hasContent = total > 0;
+  ctx.setTextColor(hasContent ? COLOR_MAIN_VAL : new Color("#8e8e93", 0.6));
+  lines.forEach((line, i) => {
+    ctx.setFont(Font.boldSystemFont(fSize));
+    ctx.drawTextInRect(line, new Rect(0, size / 2 - totalH / 2 + i * (lineH + 1), size, lineH));
+  });
 
   return ctx.getImage();
 }
