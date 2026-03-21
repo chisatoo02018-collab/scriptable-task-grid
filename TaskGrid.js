@@ -207,7 +207,7 @@ async function createWidget() {
   const gaugeInnerRow = gaugeBlock.addStack();
   gaugeInnerRow.layoutHorizontally();
   gaugeInnerRow.centerAlignContent();
-  const COLOR_GAUGE_TRACK = new Color("#09AEFA");  // ゲージトラック（iOS青）
+  const COLOR_GAUGE_TRACK = COLOR_DUE;  // ゲージトラック（タスクドーナツと同じ青）
   addGaugeColumn(gaugeInnerRow, monthElapsed, GAUGE_SIZE,
     COLOR_GAUGE_TRACK, COLOR_ACCENT,
     { type: "text", value: `残\n${monthRemainH}h` });
@@ -428,7 +428,7 @@ function drawBarChart(data, width, height) {
   ctx.respectScreenScale = true;
 
   const n        = data.length;
-  const LABEL_H  = 6;                    // 曜日ラベル領域
+  const LABEL_H  = 8;                    // 曜日ラベル領域
   const NUM_H    = 9;                    // 件数ラベル領域
   const CAP_VAL  = 15;                   // 棒の高さ上限（超えたら "15+" 表示）
   const chartH   = height - LABEL_H;
@@ -469,7 +469,7 @@ function drawBarChart(data, width, height) {
     ctx.setFont(Font.systemFont(6));
     ctx.setTextColor(isToday ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
     ctx.setTextAlignedCenter();
-    ctx.drawTextInRect(dayNames[date.getDay()], new Rect(i * slotW, chartH + 1, slotW, LABEL_H));
+    ctx.drawTextInRect(dayNames[date.getDay()], new Rect(i * slotW, height - LABEL_H, slotW, LABEL_H));
   }
 
   return ctx.getImage();
@@ -487,7 +487,7 @@ function drawLineChart(data, width, height, curMonthIdx) {
   ctx.respectScreenScale = true;
 
   const n       = data.length;    // 12
-  const LABEL_H = 6;
+  const LABEL_H = 8;
   const TOP_PAD = 1;
   const YAXIS_W = 18;             // 右端Y軸ラベル領域（pt）
   const chartH  = height - LABEL_H - TOP_PAD;
@@ -514,7 +514,7 @@ function drawLineChart(data, width, height, curMonthIdx) {
     ctx.setFont(Font.systemFont(6));
     ctx.setTextColor(new Color("#636366", 0.75));
     ctx.setTextAlignedRight();
-    ctx.drawTextInRect(`${v}`, new Rect(plotW, y - 5, YAXIS_W - 1, 9));
+    ctx.drawTextInRect(`${v}`, new Rect(plotW, Math.max(0, y - 5), YAXIS_W - 1, 9));
   }
 
   // 前年ライン（グレー、全12ヶ月）
