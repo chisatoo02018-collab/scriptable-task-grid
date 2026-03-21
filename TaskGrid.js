@@ -8,7 +8,7 @@ const COLOR_MINUS    = new Color("#ff453a");    // 赤（マイナス）
 const COLOR_MAIN_VAL = new Color("#ffffff");    // メイン数字
 const COLOR_SUB_TEXT = new Color("#8e8e93");    // サブテキスト
 const COLOR_BG       = new Color("#1c1c1e");    // 背景
-const COLOR_DUE         = new Color("#0A84FF");    // 残りタスク・ゲージトラック（iOS青）
+const COLOR_DUE         = new Color("#09AEFA");    // 残りタスク・ゲージトラック（iOS青）
 const COLOR_DIVIDER  = new Color("#3a3a3c");    // 区切り線
 const DONUT_SIZE     = 54;                      // ドーナツグラフのサイズ（pt）
 const GAUGE_SIZE     = 46;                      // 円形ゲージのサイズ（pt）
@@ -207,7 +207,7 @@ async function createWidget() {
   const gaugeInnerRow = gaugeBlock.addStack();
   gaugeInnerRow.layoutHorizontally();
   gaugeInnerRow.centerAlignContent();
-  const COLOR_GAUGE_TRACK = new Color("#0A84FF");  // ゲージトラック（iOS青）
+  const COLOR_GAUGE_TRACK = new Color("#09AEFA");  // ゲージトラック（iOS青）
   addGaugeColumn(gaugeInnerRow, monthElapsed, GAUGE_SIZE,
     COLOR_GAUGE_TRACK, COLOR_ACCENT,
     { type: "text", value: `残\n${monthRemainH}h` });
