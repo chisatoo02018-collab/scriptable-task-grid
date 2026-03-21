@@ -192,7 +192,7 @@ async function createWidget() {
   const gLabelRow = gaugeBlock.addStack();
   gLabelRow.layoutHorizontally();
   gLabelRow.addSpacer();
-  const gLabel = gLabelRow.addText("残時間");
+  const gLabel = gLabelRow.addText("消費時間");
   gLabel.font      = Font.systemFont(7);
   gLabel.textColor = COLOR_SUB_TEXT;
   gLabelRow.addSpacer();
