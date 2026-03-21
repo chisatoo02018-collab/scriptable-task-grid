@@ -143,7 +143,7 @@ async function createWidget() {
   dhLabel.textColor = COLOR_SUB_TEXT;   // 月次タスク数ラベルと同じグレー
   donutHeader.addSpacer();
 
-  donutCol.addSpacer(2);  // 折れ線グラフ開始位置に揃える
+  donutCol.addSpacer(8);  // 折れ線グラフ65pt表示領域の中央にドーナツを配置
   addDonutColumn(donutCol, doneToday, dueToday, diffDay, centerTotal);
 
   statsRow.addSpacer(6);
@@ -173,14 +173,14 @@ async function createWidget() {
   lineImg.resizable = false;
   lineImg.imageSize = new Size(195, 65);
 
-  widget.addSpacer(4);
+  widget.addSpacer(2);
   addHorizontalLine(widget);
-  widget.addSpacer(8);  // 仕切り線から下段を少し離す
+  widget.addSpacer(3);  // 仕切り線から下段を少し離す
 
   // ── 下段：円形ゲージ（左・ドーナツ下）| 日次バーチャート（右・折れ線下） ──
   const bottomRow = widget.addStack();
   bottomRow.layoutHorizontally();
-  bottomRow.centerAlignContent();
+  bottomRow.topAlignContent();  // ラベルを上の仕切り線寄りに配置
 
   // 円形ゲージ（左）＋「残時間」ラベル
   bottomRow.addSpacer(7);  // 左マージン
@@ -255,18 +255,18 @@ function addDonutColumn(container, done, due, diff, centerVal) {
   textCol.centerAlignContent();
   textCol.size = new Size(52, 0);  // 112 - donut(54) - gap(6)
 
-  // ラベル前にflexible spacerで右寄せ → 数値右端が常に52pt位置に揃う
+  // ラベル固定幅(30pt) + 数値固定幅(22pt) = 52pt → 開始位置・右端が揃う
   function addLabelRow(col, label, value, color) {
     const row = col.addStack();
     row.layoutHorizontally();
     row.centerAlignContent();
-    row.addSpacer();          // flexible: ラベルを右に押し付ける
-    const lbl = row.addText(label);
+    const lblBox = row.addStack();
+    lblBox.size = new Size(30, 0);   // 全ラベルが同じX位置から始まる
+    const lbl = lblBox.addText(label);
     lbl.font      = Font.systemFont(7);
     lbl.textColor = COLOR_SUB_TEXT;
-    row.addSpacer(3);
     const numBox = row.addStack();
-    numBox.size = new Size(22, 0);
+    numBox.size = new Size(22, 0);   // 数値右端が常に同じ位置
     numBox.addSpacer();
     const val = numBox.addText(value);
     val.font      = Font.systemFont(7);
@@ -426,26 +426,36 @@ function drawLineChart(data, width, height, curMonthIdx) {
   ctx.opaque = false;
   ctx.respectScreenScale = true;
 
-  const n       = data.length;           // 12
+  const n       = data.length;    // 12
   const LABEL_H = 12;
   const TOP_PAD = 4;
+  const YAXIS_W = 18;             // 右端Y軸ラベル領域（pt）
   const chartH  = height - LABEL_H - TOP_PAD;
+  const plotW   = width - YAXIS_W;  // グラフ実描画幅
   const maxVal  = Math.max(...data.map(d => Math.max(d.doneThis, d.donePrev)), 1);
 
-  const xPos = (i) => (width - 12) * i / (n - 1) + 6;
+  const xPos = (i) => (plotW - 12) * i / (n - 1) + 6;
   const yPos = (v) => TOP_PAD + (1 - v / maxVal) * (chartH - 2);
 
   const COLOR_PREV = new Color("#636366");
 
-  // 薄いグリッド線（中央）
-  const midY = TOP_PAD + (chartH - 2) / 2;
-  const grid = new Path();
-  grid.move(new Point(6, midY));
-  grid.addLine(new Point(width - 6, midY));
-  ctx.addPath(grid);
-  ctx.setStrokeColor(new Color("#3a3a3c", 0.5));
-  ctx.setLineWidth(0.5);
-  ctx.strokePath();
+  // Y軸の目盛り（キリのいい2〜3個）とグリッド線
+  const ticks = calcNiceTicks(maxVal);
+  for (const v of ticks) {
+    const y = yPos(v);
+    const gp = new Path();
+    gp.move(new Point(6, y));
+    gp.addLine(new Point(plotW - 6, y));
+    ctx.addPath(gp);
+    ctx.setStrokeColor(new Color("#3a3a3c", v === 0 ? 0.65 : 0.35));
+    ctx.setLineWidth(0.5);
+    ctx.strokePath();
+    // Y軸ラベル（右端にさりげなく）
+    ctx.setFont(Font.systemFont(6));
+    ctx.setTextColor(new Color("#636366", 0.75));
+    ctx.setTextAlignedRight();
+    ctx.drawTextInRect(`${v}`, new Rect(plotW, y - 5, YAXIS_W - 1, 9));
+  }
 
   // 前年ライン（グレー、全12ヶ月）
   const prevPath = new Path();
@@ -491,16 +501,36 @@ function drawLineChart(data, width, height, curMonthIdx) {
   }
 
   // X 軸ラベル（月）— 今月は白、他はグレー
-  const labelW = width / n;
+  const slotW = plotW / n;
   for (let i = 0; i < n; i++) {
     ctx.setFont(Font.systemFont(7));
     ctx.setTextColor(i === curMonthIdx ? COLOR_MAIN_VAL : COLOR_SUB_TEXT);
     ctx.setTextAlignedCenter();
     ctx.drawTextInRect(data[i].monthLabel,
-      new Rect(xPos(i) - labelW / 2, height - LABEL_H, labelW, LABEL_H));
+      new Rect(xPos(i) - slotW / 2, height - LABEL_H, slotW, LABEL_H));
   }
 
   return ctx.getImage();
+}
+
+// Y軸の目盛り値を計算（キリのいい2〜3本、0を含む）
+function calcNiceTicks(maxVal) {
+  if (maxVal <= 0) return [0];
+  const niceStep = (raw) => {
+    if (raw <= 0) return 1;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    for (const m of [1, 2, 5, 10]) {
+      if (m * mag >= raw) return m * mag;
+    }
+    return mag * 10;
+  };
+  for (const target of [2, 3]) {
+    const step = niceStep(maxVal / target);
+    const ticks = [];
+    for (let v = 0; v <= maxVal + step * 0.1; v += step) ticks.push(Math.round(v));
+    if (ticks.length >= 2 && ticks.length <= 4) return ticks;
+  }
+  return [0, Math.round(maxVal)];
 }
 
 function addGaugeColumn(container, progress, size, trackColor, fillColor, centerContent) {
@@ -586,7 +616,7 @@ function addLegendDot(container, color, label) {
   dot.cornerRadius = 3;
   container.addSpacer(2);
   const t = container.addText(label);
-  t.font = Font.systemFont(6);
+  t.font = Font.systemFont(8);   // タイトルラベルと同じサイズ
   t.textColor = COLOR_SUB_TEXT;
 }
 
