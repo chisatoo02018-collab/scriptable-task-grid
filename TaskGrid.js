@@ -94,7 +94,7 @@ async function createWidget() {
 
   const rateToday = centerTotal > 0 ? Math.round(doneToday / centerTotal * 100) : 0;
   const centerStr = centerTotal > 0
-    ? (rateToday > 0 ? `${centerTotal}件\n残${dueToday}件\n${rateToday}%済` : `${centerTotal}件\n残${dueToday}件`)
+    ? (rateToday > 0 ? `${centerTotal}件\n${rateToday}%済` : `${centerTotal}件\n残${dueToday}件`)
     : `0件`;
 
   // 1〜12月の月別データ（今年 vs 前年、折れ線グラフ用）
