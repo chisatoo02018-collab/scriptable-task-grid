@@ -129,11 +129,13 @@ async function createWidget() {
   for (let i = 0; i < 7; i++) {
     const d     = new Date(thisSunday); d.setDate(thisSunday.getDate() + i);
     const dPrev = new Date(d);          dPrev.setDate(d.getDate() - 7);
+    const today = isSameDay(d, now);
     weekData.push({
       dayIndex:  i,
       countThis: cntDone(cd => isSameDay(cd, d)),
       countPrev: cntDone(cd => isSameDay(cd, dPrev)),
-      isToday:   isSameDay(d, now),
+      isToday:   today,
+      todayDue:  today ? dueTotal : 0,  // 当日のみ：未完了残数（グレー背景バー用）
     });
   }
 
@@ -462,7 +464,7 @@ function drawBarChart(data, width, height) {
   const CAP_VAL     = 15;
   const chartH      = height - LABEL_H;
   const plotW       = width - BAR_YAXIS_W;
-  const rawMax      = Math.max(...data.map(d => Math.max(d.countThis, d.countPrev)), 1);
+  const rawMax      = Math.max(...data.map(d => Math.max(d.countThis, d.countPrev, d.countThis + (d.todayDue || 0))), 1);
   const scaleMax    = Math.min(rawMax, CAP_VAL);
   const slotW       = plotW / n;
   const halfW       = Math.floor(slotW * 0.42);
@@ -497,8 +499,17 @@ function drawBarChart(data, width, height) {
   ctx.strokePath();
 
   for (let i = 0; i < n; i++) {
-    const { dayIndex, countThis, countPrev, isToday } = data[i];
+    const { dayIndex, countThis, countPrev, isToday, todayDue } = data[i];
     const slotLeft = Math.floor(i * slotW);
+
+    // 当日グレー背景バー（完了済＋未完了の総量）
+    if (isToday && todayDue > 0) {
+      const totalToday = Math.min(countThis + todayDue, CAP_VAL);
+      const bgH = Math.max(Math.round((totalToday / scaleMax) * maxBarH), 2);
+      const bx  = Math.floor(slotLeft + slotW / 2 + gap / 2);
+      ctx.setFillColor(new Color("#3a3a3c", 0.9));
+      ctx.fillRect(new Rect(bx, chartH - bgH, halfW, bgH));
+    }
 
     // 先週バー（左側・グレー）
     if (countPrev > 0) {
