@@ -71,21 +71,30 @@ async function createWidget() {
   const doneToday  = cntDone(d => isSameDay(d, now));
   const dueToday   = cntDue (d => isSameDay(d, now));
   const doneYest   = cntDone(d => isSameDay(d, yesterday));
-  const diffDay    = (doneToday + dueToday) - doneYest;
+  const diffDay    = doneToday - doneYest;  // 完了数の前日比
 
-  // ドーナツ中央値：今日期限の全タスク ∪ 今日完了した全タスク
-  const doneDueToday      = completed.filter(r => r.dueDate && isSameDay(r.dueDate, now)).length;
-  const doneTodayDueToday = completed.filter(r =>
-    r.completionDate && isSameDay(r.completionDate, now) &&
-    r.dueDate && isSameDay(r.dueDate, now)
-  ).length;
-  const centerTotal = doneDueToday + dueToday + doneToday - doneTodayDueToday;
-  const timedToday     = incomplete.filter(r => r.dueDate && isSameDay(r.dueDate, now) && r.dueDateIncludesTime).length;
-  const alldayToday    = incomplete.filter(r => r.dueDate && isSameDay(r.dueDate, now) && !r.dueDateIncludesTime).length;
-  const doneTimedToday = completed.filter(r => r.completionDate && isSameDay(r.completionDate, now) && r.dueDateIncludesTime).length;
-  const doneAlldayToday= completed.filter(r => r.completionDate && isSameDay(r.completionDate, now) && !r.dueDateIncludesTime).length;
-  const rateToday      = centerTotal > 0 ? Math.round(doneToday / centerTotal * 100) : 0;
-  const centerStr      = `${centerTotal}件\n残${dueToday}件`;
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+  // 完了済の分類（今日完了 × 期限の時間軸）
+  const doneFuture   = completed.filter(r => r.completionDate && isSameDay(r.completionDate, now) && r.dueDate && r.dueDate >= todayEnd).length;
+  const doneTodayDue = completed.filter(r => r.completionDate && isSameDay(r.completionDate, now) && r.dueDate && isSameDay(r.dueDate, now)).length;
+  const donePast     = completed.filter(r => r.completionDate && isSameDay(r.completionDate, now) && r.dueDate && r.dueDate < todayStart).length;
+  const doneNoDue    = completed.filter(r => r.completionDate && isSameDay(r.completionDate, now) && !r.dueDate).length;
+  // doneToday === doneFuture + doneTodayDue + donePast + doneNoDue
+
+  // 未完了の分類
+  const incompletePast = incomplete.filter(r => r.dueDate && r.dueDate < todayStart).length;
+  // incompleteToday = dueToday（既存変数を流用）
+
+  // スコープ定義：今日完了 + 今日期限の未完了 + 期日超過の未完了
+  // → リング・%・ラベル合計がすべてこの scopeTotal で一致する
+  const dueTotal   = dueToday + incompletePast;
+  const scopeTotal = doneToday + dueTotal;
+  const rateToday  = scopeTotal > 0 ? Math.round(doneToday / scopeTotal * 100) : 0;
+  const centerStr  = scopeTotal > 0
+    ? (rateToday > 0 ? `${scopeTotal}件\n残${dueTotal}件\n${rateToday}%済` : `${scopeTotal}件\n残${dueTotal}件`)
+    : `0件`;
 
   // 1〜12月の月別データ（今年 vs 前年、折れ線グラフ用）
   const prevYear   = curYear - 1;
@@ -120,11 +129,13 @@ async function createWidget() {
   for (let i = 0; i < 7; i++) {
     const d     = new Date(thisSunday); d.setDate(thisSunday.getDate() + i);
     const dPrev = new Date(d);          dPrev.setDate(d.getDate() - 7);
+    const today = isSameDay(d, now);
     weekData.push({
       dayIndex:  i,
       countThis: cntDone(cd => isSameDay(cd, d)),
       countPrev: cntDone(cd => isSameDay(cd, dPrev)),
-      isToday:   isSameDay(d, now),
+      isToday:   today,
+      todayDue:  today ? dueTotal : 0,  // 当日のみ：未完了残数（グレー背景バー用）
     });
   }
 
@@ -159,8 +170,9 @@ async function createWidget() {
   donutHeader.addSpacer();
 
   donutCol.addSpacer(8);  // 折れ線グラフ65pt表示領域の中央にドーナツを配置
-  addDonutColumn(donutCol, doneToday, dueToday, diffDay,
-    timedToday, alldayToday, doneTimedToday, doneAlldayToday, rateToday, centerStr);
+  addDonutColumn(donutCol, doneToday, dueTotal, diffDay,
+    doneFuture, doneTodayDue, donePast, doneNoDue,
+    incompletePast, dueToday, centerStr);
 
   statsRow.addSpacer(6);
   const statDiv = statsRow.addStack();
@@ -254,7 +266,8 @@ async function createWidget() {
 // ドーナツカラム
 // --------------------------------------------------
 // done/due はドーナツ弧の色分け用、centerVal は中央表示文字列（\n区切り可）
-function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, doneAllday, rate, centerVal) {
+// due = dueToday + incompletePast（リングと%は同一分母 scopeTotal=done+due で一致）
+function addDonutColumn(container, done, due, diff, doneFuture, doneTodayDue, donePast, doneNoDue, incompletePast, incompleteToday, centerVal) {
   const wrapper = container.addStack();
   wrapper.layoutHorizontally();
   wrapper.bottomAlignContent();     // ラベル群の下端（前日比:）を水平仕切り線に近づける
@@ -315,20 +328,21 @@ function addDonutColumn(container, done, due, diff, timed, allday, doneTimed, do
     val.textColor = color;
   }
 
-  // 完了セクション（1件以上あるときのみ表示）
-  if (doneTimed > 0 || doneAllday > 0) {
-    addHeaderRow(textCol, "完了");
-    if (doneTimed  > 0) addLabelRow(textCol, "時刻指定:", `${doneTimed}`,  COLOR_MAIN_VAL);
-    if (doneAllday > 0) addLabelRow(textCol, "終日指定:", `${doneAllday}`, COLOR_MAIN_VAL);
+  // 完了済セクション（1件以上あるときのみ表示）
+  if (doneFuture > 0 || doneTodayDue > 0 || donePast > 0 || doneNoDue > 0) {
+    addHeaderRow(textCol, "完了済");
+    if (doneFuture   > 0) addLabelRow(textCol, "未来分:", `${doneFuture}`,   COLOR_MAIN_VAL);
+    if (doneTodayDue > 0) addLabelRow(textCol, "当日分:", `${doneTodayDue}`, COLOR_MAIN_VAL);
+    if (donePast     > 0) addLabelRow(textCol, "過去分:", `${donePast}`,     COLOR_MAIN_VAL);
+    if (doneNoDue    > 0) addLabelRow(textCol, "期限なし:", `${doneNoDue}`,  COLOR_MAIN_VAL);
   }
   // 未完了セクション（1件以上あるときのみ表示）
-  if (timed > 0 || allday > 0) {
+  if (incompletePast > 0 || incompleteToday > 0) {
     addHeaderRow(textCol, "未完了");
-    if (timed  > 0) addLabelRow(textCol, "時刻指定:", `${timed}`,  COLOR_MAIN_VAL);
-    if (allday > 0) addLabelRow(textCol, "終日指定:", `${allday}`, COLOR_MAIN_VAL);
+    if (incompletePast  > 0) addLabelRow(textCol, "過去分:", `${incompletePast}`,  COLOR_MAIN_VAL);
+    if (incompleteToday > 0) addLabelRow(textCol, "当日分:", `${incompleteToday}`, COLOR_MAIN_VAL);
   }
-  // 統計（0・±0は非表示）
-  if (rate > 0) addFlatRow(textCol, "完了率:", `${rate}%`, COLOR_MAIN_VAL);
+  // 総数前日比（±0は非表示）
   if (diff !== 0) {
     const sign   = diff > 0 ? "+" : "";
     const dColor = diff > 0 ? COLOR_ACCENT : COLOR_MINUS;
@@ -450,7 +464,7 @@ function drawBarChart(data, width, height) {
   const CAP_VAL     = 15;
   const chartH      = height - LABEL_H;
   const plotW       = width - BAR_YAXIS_W;
-  const rawMax      = Math.max(...data.map(d => Math.max(d.countThis, d.countPrev)), 1);
+  const rawMax      = Math.max(...data.map(d => Math.max(d.countThis, d.countPrev, d.countThis + (d.todayDue || 0))), 1);
   const scaleMax    = Math.min(rawMax, CAP_VAL);
   const slotW       = plotW / n;
   const halfW       = Math.floor(slotW * 0.42);
@@ -485,8 +499,17 @@ function drawBarChart(data, width, height) {
   ctx.strokePath();
 
   for (let i = 0; i < n; i++) {
-    const { dayIndex, countThis, countPrev, isToday } = data[i];
+    const { dayIndex, countThis, countPrev, isToday, todayDue } = data[i];
     const slotLeft = Math.floor(i * slotW);
+
+    // 当日グレー背景バー（完了済＋未完了の総量）
+    if (isToday && todayDue > 0) {
+      const totalToday = Math.min(countThis + todayDue, CAP_VAL);
+      const bgH = Math.max(Math.round((totalToday / scaleMax) * maxBarH), 2);
+      const bx  = Math.floor(slotLeft + slotW / 2 + gap / 2);
+      ctx.setFillColor(new Color("#3a3a3c", 0.9));
+      ctx.fillRect(new Rect(bx, chartH - bgH, halfW, bgH));
+    }
 
     // 先週バー（左側・グレー）
     if (countPrev > 0) {
