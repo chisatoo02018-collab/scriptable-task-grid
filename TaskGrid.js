@@ -129,13 +129,15 @@ async function createWidget() {
   for (let i = 0; i < 7; i++) {
     const d     = new Date(thisSunday); d.setDate(thisSunday.getDate() + i);
     const dPrev = new Date(d);          dPrev.setDate(d.getDate() - 7);
-    const today = isSameDay(d, now);
+    const today   = isSameDay(d, now);
+    const isFuture = d > todayEnd;
     weekData.push({
-      dayIndex:  i,
-      countThis: cntDone(cd => isSameDay(cd, d)),
-      countPrev: cntDone(cd => isSameDay(cd, dPrev)),
-      isToday:   today,
-      todayDue:  today ? dueTotal : 0,  // 当日のみ：未完了残数（グレー背景バー用）
+      dayIndex:   i,
+      countThis:  cntDone(cd => isSameDay(cd, d)),
+      countPrev:  cntDone(cd => isSameDay(cd, dPrev)),
+      isToday:    today,
+      todayDue:   today    ? dueTotal : 0,  // 当日：未完了残数（青背景バー用）
+      futureDue:  isFuture ? cntDue(dd => isSameDay(dd, d)) : 0,  // 未来日：期限付き未完了数
     });
   }
 
@@ -464,7 +466,7 @@ function drawBarChart(data, width, height) {
   const CAP_VAL     = 15;
   const chartH      = height - LABEL_H;
   const plotW       = width - BAR_YAXIS_W;
-  const rawMax      = Math.max(...data.map(d => Math.max(d.countThis, d.countPrev, d.countThis + (d.todayDue || 0))), 1);
+  const rawMax      = Math.max(...data.map(d => Math.max(d.countThis, d.countPrev, d.countThis + (d.todayDue || 0), d.futureDue || 0)), 1);
   const scaleMax    = Math.min(rawMax, CAP_VAL);
   const slotW       = plotW / n;
   const gap         = 0;
@@ -499,7 +501,7 @@ function drawBarChart(data, width, height) {
   ctx.strokePath();
 
   for (let i = 0; i < n; i++) {
-    const { dayIndex, countThis, countPrev, isToday, todayDue } = data[i];
+    const { dayIndex, countThis, countPrev, isToday, todayDue, futureDue } = data[i];
     const slotLeft = Math.floor(i * slotW);
 
     // 当日グレー背景バー（完了済＋未完了の総量）
@@ -520,18 +522,22 @@ function drawBarChart(data, width, height) {
       ctx.fillRect(new Rect(bx, chartH - barH, halfW, barH));
     }
 
-    // 今週バー（右側）
-    if (countThis > 0) {
+    // 今週バー（右側）：過去・当日は完了数、未来日は期限付き未完了数（青）
+    const bx = Math.floor(slotLeft + slotW / 2 + gap / 2);
+    if (futureDue > 0) {
+      const capped = Math.min(futureDue, CAP_VAL);
+      const barH   = Math.max(Math.round((capped / scaleMax) * maxBarH), 2);
+      ctx.setFillColor(new Color("#007AFF", 0.55));
+      ctx.fillRect(new Rect(bx, chartH - barH, halfW, barH));
+    } else if (countThis > 0) {
       const capped   = Math.min(countThis, CAP_VAL);
       const barH     = Math.max(Math.round((capped / scaleMax) * maxBarH), 2);
-      const by       = chartH - barH;
-      const bx       = Math.floor(slotLeft + slotW / 2 + gap / 2);
       const isCapped = countThis > CAP_VAL;
       const barColor = isCapped
         ? (isToday ? new Color("#ffcc00") : new Color("#ffcc00", 0.35))
         : (isToday ? COLOR_ACCENT : new Color("#30d158", 0.38));
       ctx.setFillColor(barColor);
-      ctx.fillRect(new Rect(bx, by, halfW, barH));
+      ctx.fillRect(new Rect(bx, chartH - barH, halfW, barH));
     }
 
     // 曜日ラベル（下端・固定）
