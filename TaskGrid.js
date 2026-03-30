@@ -93,7 +93,7 @@ async function createWidget() {
   const scopeTotal = doneToday + dueTotal;
   const rateToday  = scopeTotal > 0 ? Math.round(doneToday / scopeTotal * 100) : 0;
   const centerStr  = scopeTotal > 0
-    ? (rateToday > 0 ? `${scopeTotal}件\n残${dueTotal}件\n${rateToday}%済` : `${scopeTotal}件\n残${dueTotal}件`)
+    ? (rateToday > 0 ? `${scopeTotal}件\n残${dueTotal}件\n${rateToday}%済` : `${scopeTotal}件`)
     : `0件`;
 
   // 1〜12月の月別データ（今年 vs 前年、折れ線グラフ用）
@@ -507,7 +507,7 @@ function drawBarChart(data, width, height) {
       const totalToday = Math.min(countThis + todayDue, CAP_VAL);
       const bgH = Math.max(Math.round((totalToday / scaleMax) * maxBarH), 2);
       const bx  = Math.floor(slotLeft + slotW / 2 + gap / 2);
-      ctx.setFillColor(new Color("#3a3a3c", 0.9));
+      ctx.setFillColor(new Color("#636366", 0.55));
       ctx.fillRect(new Rect(bx, chartH - bgH, halfW, bgH));
     }
 
