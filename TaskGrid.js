@@ -507,7 +507,7 @@ function drawBarChart(data, width, height) {
       const totalToday = Math.min(countThis + todayDue, CAP_VAL);
       const bgH = Math.max(Math.round((totalToday / scaleMax) * maxBarH), 2);
       const bx  = Math.floor(slotLeft + slotW / 2 + gap / 2);
-      ctx.setFillColor(new Color("#636366", 0.55));
+      ctx.setFillColor(new Color("#007AFF", 0.55));
       ctx.fillRect(new Rect(bx, chartH - bgH, halfW, bgH));
     }
 
