@@ -467,8 +467,8 @@ function drawBarChart(data, width, height) {
   const rawMax      = Math.max(...data.map(d => Math.max(d.countThis, d.countPrev, d.countThis + (d.todayDue || 0))), 1);
   const scaleMax    = Math.min(rawMax, CAP_VAL);
   const slotW       = plotW / n;
-  const gap         = Math.max(1, Math.floor(slotW * 0.04));
-  const halfW       = Math.floor((slotW - gap) / 2);
+  const gap         = 0;
+  const halfW       = Math.floor(slotW * 0.42);
   const maxBarH     = chartH - 3;        // バー最大高（上部3ptのみ確保）
   const dayNames    = ["日", "月", "火", "水", "木", "金", "土"];
 
